@@ -1,0 +1,274 @@
+<div class="min-h-screen bg-surface dark:bg-[#191c1e] flex">
+  <app-sidebar></app-sidebar>
+
+  <div
+    [class]="collapsed() ? 'lg:ml-16' : 'lg:ml-64'"
+    class="flex-1 pt-14 lg:pt-0 lg:transition-all lg:duration-300"
+  >
+    <app-modal-crear-taller></app-modal-crear-taller>
+
+    <!-- Header -->
+    <header
+      class="bg-white dark:bg-[#2e3133] shadow-sm border-b border-gray-200 dark:border-gray-700"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-4">
+            <h1 class="text-lg sm:text-xl font-bold text-on-surface dark:text-white">Auxia</h1>
+            @if (taller()) {
+              <span class="text-sm text-green-600 dark:text-green-400 hidden sm:inline"
+                >• {{ taller()?.nombre }}</span
+              >
+            }
+          </div>
+          <div class="flex items-center gap-2 sm:gap-4">
+            <span class="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400">
+              {{ user()?.nombre }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    @if (taller()) {
+      <!-- Taller Info Banner -->
+      <div class="bg-gradient-to-r from-primary to-blue-600 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
+            <div>
+              <h2 class="text-xl sm:text-2xl font-bold">{{ taller()?.nombre }}</h2>
+              <p class="text-white/80 text-sm sm:text-base">{{ taller()?.especialidad }}</p>
+            </div>
+            <div class="flex flex-wrap gap-3 sm:gap-6 text-xs sm:text-sm">
+              <div>
+                <p class="text-white/60">Teléfono</p>
+                <p class="font-medium">{{ taller()?.telefono || 'No registrado' }}</p>
+              </div>
+              <div>
+                <p class="text-white/60">Horario</p>
+                <p class="font-medium">{{ taller()?.horario_atencion || 'No registrado' }}</p>
+              </div>
+              <div>
+                <p class="text-white/60">Ubicación</p>
+                <p class="font-medium text-xs">
+                  {{ taller()?.ubicacion_lat?.toFixed(4) }},
+                  {{ taller()?.ubicacion_lng?.toFixed(4) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <main class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6">
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-3 sm:p-4">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div
+              class="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0"
+            >
+              <svg
+                class="w-4 h-4 sm:w-5 sm:h-5 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <p
+                class="text-xs sm:text-sm font-medium text-on-surface-variant dark:text-gray-400 truncate"
+              >
+                Total
+              </p>
+              <p class="text-lg sm:text-xl font-bold text-on-surface dark:text-white">
+                {{ estadisticas().total_solicitudes }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-3 sm:p-4">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div
+              class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0"
+            >
+              <svg
+                class="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <p
+                class="text-xs sm:text-sm font-medium text-on-surface-variant dark:text-gray-400 truncate"
+              >
+                Pendientes
+              </p>
+              <p class="text-lg sm:text-xl font-bold text-on-surface dark:text-white">
+                {{ estadisticas().solicitudes_pendientes }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-3 sm:p-4">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div
+              class="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0"
+            >
+              <svg
+                class="w-4 h-4 sm:w-5 sm:h-5 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <p
+                class="text-xs sm:text-sm font-medium text-on-surface-variant dark:text-gray-400 truncate"
+              >
+                Completadas
+              </p>
+              <p class="text-lg sm:text-xl font-bold text-on-surface dark:text-white">
+                {{ estadisticas().solicitudes_completadas }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-3 sm:p-4">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div
+              class="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0"
+            >
+              <svg
+                class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <p
+                class="text-xs sm:text-sm font-medium text-on-surface-variant dark:text-gray-400 truncate"
+              >
+                Técnicos
+              </p>
+              <p class="text-lg sm:text-xl font-bold text-on-surface dark:text-white">
+                {{ estadisticas().tecnicos_activos }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Notifications -->
+      <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm overflow-hidden">
+        <div class="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-base sm:text-lg font-semibold text-on-surface dark:text-white">
+            Solicitudes Recientes
+          </h2>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[500px]">
+            <thead class="bg-gray-50 dark:bg-[#191c1e]">
+              <tr>
+                <th class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Cliente
+                </th>
+                <th class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Vehículo
+                </th>
+                <th
+                  class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell"
+                >
+                  Tipo
+                </th>
+                <th
+                  class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell"
+                >
+                  Descripción
+                </th>
+                <th class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Estado
+                </th>
+                <th
+                  class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell"
+                >
+                  Fecha
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              @for (nota of notificaciones(); track nota.id) {
+                <tr class="hover:bg-gray-50 dark:hover:bg-[#191c1e]">
+                  <td class="px-3 py-3 text-xs sm:text-sm text-on-surface dark:text-white">
+                    {{ nota.cliente }}
+                  </td>
+                  <td class="px-3 py-3 text-xs sm:text-sm text-on-surface dark:text-white">
+                    {{ nota.vehiculo }}
+                  </td>
+                  <td
+                    class="px-3 py-3 text-xs sm:text-sm text-on-surface dark:text-white hidden sm:table-cell"
+                  >
+                    {{ nota.tipo }}
+                  </td>
+                  <td
+                    class="px-3 py-3 text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 hidden md:table-cell"
+                  >
+                    {{ nota.descripcion }}
+                  </td>
+                  <td class="px-3 py-3">
+                    <span
+                      [class]="getEstadoColor(nota.estado)"
+                      class="px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full"
+                    >
+                      {{ getEstadoLabel(nota.estado) }}
+                    </span>
+                  </td>
+                  <td
+                    class="px-3 py-3 text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 hidden lg:table-cell"
+                  >
+                    {{ formatDate(nota.created_at) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>

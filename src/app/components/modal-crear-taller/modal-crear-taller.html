@@ -1,0 +1,92 @@
+@if (tallerService.showModalTaller()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center">
+    <div class="fixed inset-0 bg-black/50" (click)="close()"></div>
+
+    <div
+      class="relative bg-white dark:bg-[#2e3133] rounded-xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+    >
+      <div class="p-6">
+        <h2 class="text-xl font-bold text-on-surface dark:text-white mb-2">¡Bienvenido a Auxia!</h2>
+        <p class="text-on-surface-variant dark:text-gray-400 mb-6">
+          Para comenzar, necesitas registrar tu taller mecánico.
+        </p>
+
+        @if (error()) {
+          <div class="bg-error/10 text-error p-3 rounded-lg mb-4 text-sm">
+            {{ error() }}
+          </div>
+        }
+
+        <form (ngSubmit)="onSubmit()" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-on-surface dark:text-white mb-1">
+              Nombre del taller *
+            </label>
+            <input
+              type="text"
+              [(ngModel)]="nombre"
+              name="nombre"
+              required
+              class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white"
+              placeholder="Mi Taller Mecánico"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-on-surface dark:text-white mb-1">
+              Especialidad *
+            </label>
+            <select
+              [(ngModel)]="especialidad"
+              name="especialidad"
+              required
+              class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white"
+            >
+              <option value="">Selecciona...</option>
+              @for (esp of Especialidades; track esp) {
+                <option [value]="esp">{{ esp }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-on-surface dark:text-white mb-1">
+              Teléfono
+            </label>
+            <input
+              type="tel"
+              [(ngModel)]="telefono"
+              name="telefono"
+              class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white"
+              placeholder="+51 999 999 999"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-on-surface dark:text-white mb-1">
+              Horario de atención
+            </label>
+            <input
+              type="text"
+              [(ngModel)]="horario"
+              name="horario"
+              class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white"
+              placeholder="Lun-Sáb 8am-6pm"
+            />
+          </div>
+
+          <input type="hidden" [(ngModel)]="lat" name="lat" />
+          <input type="hidden" [(ngModel)]="lng" name="lng" />
+
+          <button
+            type="submit"
+            [disabled]="loading()"
+            class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50"
+          >
+            {{ loading() ? 'Creando...' : 'Crear Taller' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+}

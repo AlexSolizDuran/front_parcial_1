@@ -1,0 +1,185 @@
+<div class="min-h-screen bg-surface dark:bg-[#191c1e] flex">
+  <app-sidebar></app-sidebar>
+
+  <div
+    [class]="collapsed() ? 'lg:ml-16' : 'lg:ml-64'"
+    class="flex-1 pt-14 lg:pt-0 lg:transition-all lg:duration-300"
+  >
+    <app-modal-crear-taller></app-modal-crear-taller>
+    <app-modal-ubicacion
+      [show]="showModalUbicacion()"
+      [latitudInput]="latTaller()"
+      [longitudInput]="lngTaller()"
+      (closed)="closeModalUbicacion()"
+      (saved)="onUbicacionSaved($event)"
+    ></app-modal-ubicacion>
+
+    <header
+      class="bg-white dark:bg-[#2e3133] shadow-sm border-b border-gray-200 dark:border-gray-700"
+    >
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+        <div class="flex justify-between items-center h-14 sm:h-16">
+          <h1 class="text-base sm:text-xl font-bold text-on-surface dark:text-white">
+            Configuración
+          </h1>
+        </div>
+      </div>
+    </header>
+
+    @if (loading()) {
+      <div class="flex items-center justify-center h-48 sm:h-64">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    } @else if (!taller()) {
+      <div class="flex items-center justify-center h-48 sm:h-64">
+        <p class="text-gray-500">Debes crear un taller primero</p>
+      </div>
+    } @else {
+      <main class="max-w-3xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-6">
+        <!-- Taller Info -->
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+          <div class="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 class="text-base sm:text-lg font-semibold text-on-surface dark:text-white">
+              Datos del Taller
+            </h2>
+            @if (!editing()) {
+              <button (click)="enableEdit()" class="text-primary hover:underline text-sm">
+                Editar
+              </button>
+            }
+          </div>
+
+          <div class="space-y-3 sm:space-y-4">
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >Nombre</label
+              >
+              @if (editing()) {
+                <input
+                  type="text"
+                  [(ngModel)]="nombreTaller"
+                  class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+                />
+              } @else {
+                <p class="text-sm sm:text-base text-on-surface dark:text-white">
+                  {{ taller()?.nombre }}
+                </p>
+              }
+            </div>
+
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >Teléfono</label
+              >
+              @if (editing()) {
+                <input
+                  type="tel"
+                  [(ngModel)]="telefonoTaller"
+                  class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+                />
+              } @else {
+                <p class="text-sm sm:text-base text-on-surface dark:text-white">
+                  {{ taller()?.telefono || 'No registrado' }}
+                </p>
+              }
+            </div>
+
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >Horario</label
+              >
+              @if (editing()) {
+                <input
+                  type="text"
+                  [(ngModel)]="horarioTaller"
+                  class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+                  placeholder="Lun-Sáb 8am-6pm"
+                />
+              } @else {
+                <p class="text-sm sm:text-base text-on-surface dark:text-white">
+                  {{ taller()?.horario_atencion || 'No registrado' }}
+                </p>
+              }
+            </div>
+
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >Ubicación</label
+              >
+              @if (editing()) {
+                <div class="flex items-center gap-2">
+                  <p class="text-sm text-on-surface dark:text-white flex-1">
+                    Lat: {{ latTaller()?.toFixed(4) }}, Lng: {{ lngTaller()?.toFixed(4) }}
+                  </p>
+                  <button
+                    type="button"
+                    (click)="openModalUbicacion()"
+                    class="px-3 py-1.5 text-xs sm:text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              } @else {
+                <p class="text-sm text-on-surface dark:text-white">
+                  {{ taller()?.ubicacion_lat?.toFixed(4) }},
+                  {{ taller()?.ubicacion_lng?.toFixed(4) }}
+                </p>
+              }
+            </div>
+
+            @if (editing()) {
+              <div class="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
+                <button
+                  (click)="cancelEdit()"
+                  class="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  (click)="guardarCambios()"
+                  [disabled]="saving()"
+                  class="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-50 text-sm"
+                >
+                  {{ saving() ? 'Guardando...' : 'Guardar' }}
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Account Info -->
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-4 sm:p-6">
+          <h2
+            class="text-base sm:text-lg font-semibold text-on-surface dark:text-white mb-3 sm:mb-4"
+          >
+            Cuenta
+          </h2>
+          <div class="space-y-2 sm:space-y-3">
+            <div>
+              <p class="text-xs sm:text-sm text-gray-500">Nombre</p>
+              <p class="text-sm sm:text-base text-on-surface dark:text-white">
+                {{ authService.user()?.nombre }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs sm:text-sm text-gray-500">Email</p>
+              <p class="text-sm sm:text-base text-on-surface dark:text-white">
+                {{ authService.user()?.email }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs sm:text-sm text-gray-500">Rol</p>
+              <p class="text-sm sm:text-base text-on-surface dark:text-white uppercase">
+                {{ authService.user()?.rol }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    }
+  </div>
+</div>

@@ -1,0 +1,419 @@
+<div class="min-h-screen bg-surface dark:bg-[#191c1e] flex">
+  <app-sidebar></app-sidebar>
+
+  <div
+    [class]="collapsed() ? 'lg:ml-16' : 'lg:ml-64'"
+    class="flex-1 pt-14 lg:pt-0 lg:transition-all lg:duration-300"
+  >
+    <app-modal-crear-taller></app-modal-crear-taller>
+
+    <header
+      class="bg-white dark:bg-[#2e3133] shadow-sm border-b border-gray-200 dark:border-gray-700"
+    >
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+        <div class="flex justify-between items-center h-14 sm:h-16">
+          <h1 class="text-base sm:text-xl font-bold text-on-surface dark:text-white">
+            Gestión de Técnicos
+          </h1>
+        </div>
+      </div>
+    </header>
+
+    @if (loading()) {
+      <div class="flex items-center justify-center h-48 sm:h-64">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    } @else {
+      <main class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6">
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm overflow-hidden">
+          <div
+            class="px-3 sm:px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-col sm:flex-row gap-2 sm:gap-3"
+          >
+            <h2 class="text-base sm:text-lg font-semibold text-on-surface dark:text-white">
+              Técnicos
+            </h2>
+            <button
+              (click)="openModalCrear()"
+              class="bg-primary text-white px-3 py-1.5 sm:py-2 rounded-lg hover:opacity-90 text-sm"
+            >
+              + Agregar
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[450px]">
+              <thead class="bg-gray-50 dark:bg-[#191c1e]">
+                <tr>
+                  <th
+                    class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    Técnico
+                  </th>
+                  <th
+                    class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell"
+                  >
+                    Teléfono
+                  </th>
+                  <th
+                    class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    Estado
+                  </th>
+                  <th
+                    class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                @for (tecnico of tecnicoService.tecnicos(); track tecnico.id) {
+                  <tr class="hover:bg-gray-50 dark:hover:bg-[#191c1e]">
+                    <td class="px-3 py-3">
+                      <div class="flex items-center gap-2 sm:gap-3">
+                        <div
+                          class="w-7 h-7 sm:w-8 sm:h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0"
+                        >
+                          <span class="text-primary text-xs sm:text-sm font-medium">{{
+                            tecnico.usuario?.nombre?.charAt(0) || 'T'
+                          }}</span>
+                        </div>
+                        <div class="min-w-0">
+                          <p
+                            class="text-xs sm:text-sm font-medium text-on-surface dark:text-white truncate max-w-[120px] sm:max-w-none"
+                          >
+                            {{ tecnico.usuario?.nombre || 'Usuario #' + tecnico.usuario_id }}
+                          </p>
+                          <p class="text-xs text-gray-500 hidden sm:block">
+                            {{ tecnico.usuario?.email }}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td
+                      class="px-3 py-3 text-xs sm:text-sm text-on-surface dark:text-white hidden sm:table-cell"
+                    >
+                      {{ tecnico.usuario?.telefono || '-' }}
+                    </td>
+                    <td class="px-3 py-3">
+                      <button
+                        (click)="toggleDisponibilidad(tecnico)"
+                        [class.bg-green-100]="tecnico.disponible"
+                        [class.text-green-800]="tecnico.disponible"
+                        [class.bg-red-100]="!tecnico.disponible"
+                        [class.text-red-800]="!tecnico.disponible"
+                        class="px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium"
+                      >
+                        {{ tecnico.disponible ? 'Activo' : 'Inactivo' }}
+                      </button>
+                    </td>
+                    <td class="px-3 py-3">
+                      <div class="flex gap-1 sm:gap-2">
+                        <button
+                          (click)="openModalDetalle(tecnico)"
+                          class="text-blue-600 hover:text-blue-800 text-xs"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          (click)="openModalEditar(tecnico)"
+                          class="text-yellow-600 hover:text-yellow-800 text-xs"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          (click)="eliminarTecnico(tecnico)"
+                          class="text-red-600 hover:text-red-800 text-xs"
+                        >
+                          X
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="px-3 py-8 text-center text-gray-500 text-sm">
+                      No hay técnicos registrados
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    }
+
+    <!-- Modal Crear -->
+    @if (showModalCrear()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+        <div class="fixed inset-0 bg-black/50" (click)="showModalCrear.set(false)"></div>
+
+        <div
+          class="relative bg-white dark:bg-[#2e3133] rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6"
+        >
+          <h3 class="text-base sm:text-lg font-bold text-on-surface dark:text-white mb-3 sm:mb-4">
+            Agregar Técnico
+          </h3>
+
+          @if (error()) {
+            <div
+              class="bg-red-100 text-red-800 p-2 sm:p-3 rounded-lg mb-3 sm:mb-4 text-xs sm:text-sm"
+            >
+              {{ error() }}
+            </div>
+          }
+
+          <form (ngSubmit)="crearTecnico()" class="space-y-3 sm:space-y-4">
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-on-surface dark:text-white mb-1"
+                >Nombre *</label
+              >
+              <input
+                type="text"
+                [(ngModel)]="nombre"
+                name="nombre"
+                required
+                class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+                placeholder="Juan Pérez"
+              />
+            </div>
+
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-on-surface dark:text-white mb-1"
+                >Usuario *</label
+              >
+              <input
+                type="text"
+                [(ngModel)]="username"
+                name="username"
+                required
+                class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+                placeholder="juanperez"
+              />
+            </div>
+
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-on-surface dark:text-white mb-1"
+                >Email *</label
+              >
+              <input
+                type="email"
+                [(ngModel)]="email"
+                name="email"
+                required
+                class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+                placeholder="juan@email.com"
+              />
+            </div>
+
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-on-surface dark:text-white mb-1"
+                >Teléfono</label
+              >
+              <input
+                type="tel"
+                [(ngModel)]="telefono"
+                name="telefono"
+                class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+                placeholder="+51 999 999 999"
+              />
+            </div>
+
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-on-surface dark:text-white mb-1"
+                >Contraseña *</label
+              >
+              <input
+                type="password"
+                [(ngModel)]="password"
+                name="password"
+                required
+                class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-on-surface dark:text-white mb-1"
+                >Confirmar *</label
+              >
+              <input
+                type="password"
+                [(ngModel)]="confirmPassword"
+                name="confirmPassword"
+                required
+                class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div class="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
+              <button
+                type="button"
+                (click)="showModalCrear.set(false)"
+                class="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                [disabled]="saving()"
+                class="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-50 text-sm"
+              >
+                {{ saving() ? 'Creando...' : 'Crear' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+
+    <!-- Modal Detalle -->
+    @if (showModalDetalle()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+        <div class="fixed inset-0 bg-black/50" (click)="showModalDetalle.set(false)"></div>
+
+        <div
+          class="relative bg-white dark:bg-[#2e3133] rounded-xl shadow-2xl w-full max-w-md mx-4 p-4 sm:p-6"
+        >
+          <h3 class="text-base sm:text-lg font-bold text-on-surface dark:text-white mb-3 sm:mb-4">
+            Detalles
+          </h3>
+
+          <div class="space-y-2 sm:space-y-3 text-xs sm:text-sm">
+            <div>
+              <p class="text-gray-500">Nombre</p>
+              <p class="font-medium text-on-surface dark:text-white">
+                {{ tecnicoSeleccionado()?.usuario?.nombre || '-' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-gray-500">Usuario</p>
+              <p class="font-medium text-on-surface dark:text-white">
+                {{ tecnicoSeleccionado()?.usuario?.username || '-' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-gray-500">Email</p>
+              <p class="font-medium text-on-surface dark:text-white">
+                {{ tecnicoSeleccionado()?.usuario?.email || '-' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-gray-500">Teléfono</p>
+              <p class="font-medium text-on-surface dark:text-white">
+                {{ tecnicoSeleccionado()?.usuario?.telefono || '-' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-gray-500">Estado</p>
+              <span
+                [class]="
+                  tecnicoSeleccionado()?.disponible
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+                "
+                class="px-2 py-0.5 rounded-full text-xs font-medium"
+                >{{ tecnicoSeleccionado()?.disponible ? 'Activo' : 'Inactivo' }}</span
+              >
+            </div>
+          </div>
+
+          <div class="mt-4 sm:mt-6 flex justify-end">
+            <button
+              (click)="showModalDetalle.set(false)"
+              class="px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90 text-sm"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Modal Editar -->
+    @if (showModalEditar()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+        <div class="fixed inset-0 bg-black/50" (click)="showModalEditar.set(false)"></div>
+
+        <div
+          class="relative bg-white dark:bg-[#2e3133] rounded-xl shadow-2xl w-full max-w-md mx-4 p-4 sm:p-6"
+        >
+          <h3 class="text-base sm:text-lg font-bold text-on-surface dark:text-white mb-3 sm:mb-4">
+            Editar Técnico
+          </h3>
+
+          @if (error()) {
+            <div
+              class="bg-red-100 text-red-800 p-2 sm:p-3 rounded-lg mb-3 sm:mb-4 text-xs sm:text-sm"
+            >
+              {{ error() }}
+            </div>
+          }
+
+          <form (ngSubmit)="guardarEdicion()" class="space-y-3 sm:space-y-4">
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-on-surface dark:text-white mb-1"
+                >Nombre</label
+              >
+              <input
+                type="text"
+                [(ngModel)]="editNombre"
+                name="editNombre"
+                class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-on-surface dark:text-white mb-1"
+                >Email</label
+              >
+              <input
+                type="email"
+                [(ngModel)]="editEmail"
+                name="editEmail"
+                class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs sm:text-sm font-medium text-on-surface dark:text-white mb-1"
+                >Teléfono</label
+              >
+              <input
+                type="tel"
+                [(ngModel)]="editTelefono"
+                name="editTelefono"
+                class="w-full px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white text-sm"
+              />
+            </div>
+            <div class="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
+              <button
+                type="button"
+                (click)="showModalEditar.set(false)"
+                class="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                [disabled]="saving()"
+                class="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-50 text-sm"
+              >
+                {{ saving() ? 'Guardando...' : 'Guardar' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+  </div>
+</div>

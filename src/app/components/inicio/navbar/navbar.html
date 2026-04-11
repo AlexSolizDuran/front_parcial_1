@@ -1,0 +1,36 @@
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm">
+  <nav class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+    <div
+      class="text-xl font-bold tracking-tighter text-black dark:text-white font-headline cursor-pointer"
+      routerLink="/"
+    >
+      Auxia
+    </div>
+    <div class="hidden md:flex items-center gap-8">
+      <a
+        class="text-blue-700 font-manrope tracking-tight text-sm font-semibold border-b-2 border-blue-700 pb-1"
+        href="#"
+        >Funcionalidades</a
+      >
+      <a
+        class="text-slate-600 dark:text-white font-manrope tracking-tight text-sm font-semibold hover:text-slate-900 transition-colors duration-200 dark:hover:text-white"
+        href="#"
+        >Contacto</a
+      >
+    </div>
+    <div class="flex items-center gap-4">
+      <button
+        class="text-slate-600 dark:text-white font-manrope tracking-tight text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 px-4 py-2 rounded-xl transition-all active:opacity-80"
+        routerLink="/login"
+      >
+        Login
+      </button>
+      <button
+        class="bg-primary text-white font-manrope tracking-tight text-sm font-semibold px-6 py-2 rounded-xl shadow-md hover:opacity-90 active:scale-95 transition-all"
+        routerLink="/register"
+      >
+        Registro
+      </button>
+    </div>
+  </nav>
+</header>
