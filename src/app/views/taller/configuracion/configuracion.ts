@@ -6,13 +6,12 @@ import { TallerService } from '../../../services/taller.service';
 import { SidebarService } from '../../../services/sidebar.service';
 import { ModalCrearTaller } from '../../../components/modal-crear-taller/modal-crear-taller';
 import { Sidebar } from '../../../components/sidebar/sidebar';
-import { ModalUbicacion } from '../../../components/modal-ubicacion/modal-ubicacion';
-import { TallerUpdate } from '../../../models/taller.model';
+import { TallerUpdate, Especialidad } from '../../../models/taller.model';
 
 @Component({
   selector: 'app-configuracion',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalCrearTaller, Sidebar, ModalUbicacion],
+  imports: [CommonModule, FormsModule, ModalCrearTaller, Sidebar],
   templateUrl: './configuracion.html',
   styleUrl: './configuracion.css',
 })
@@ -25,6 +24,7 @@ export class Configuracion implements OnInit {
   editing = signal(false);
   saving = signal(false);
   showModalUbicacion = signal(false);
+  showModalNuevaEspecialidad = signal(false);
 
   nombreTaller = signal('');
   telefonoTaller = signal('');
@@ -32,11 +32,16 @@ export class Configuracion implements OnInit {
   latTaller = signal(0);
   lngTaller = signal(0);
 
+  nuevaEspecialidadNombre = signal('');
+  nuevaEspecialidadDescripcion = signal('');
+
+  selectedEspecialidades = signal<number[]>([]);
+
   get showModal() {
     return this.tallerService.showModalTaller;
   }
 
-  get taller() {
+get taller() {
     return this.tallerService.taller;
   }
 
@@ -44,7 +49,13 @@ export class Configuracion implements OnInit {
     return this.sidebarService.collapsed;
   }
 
+  get especialidades() {
+    return this.tallerService.especialidades();
+  }
+
   ngOnInit() {
+    this.tallerService.obtenerEspecialidades();
+    
     this.tallerService.checkMiTaller().subscribe(() => {
       const t = this.tallerService.taller();
       if (t) {
@@ -53,8 +64,66 @@ export class Configuracion implements OnInit {
         this.horarioTaller.set(t.horario_atencion || '');
         this.latTaller.set(t.ubicacion_lat);
         this.lngTaller.set(t.ubicacion_lng);
+        this.selectedEspecialidades.set(t.especialidades.map(e => e.id));
       }
       this.loading.set(false);
+    });
+  }
+
+  isEspecialidadSelected(id: number): boolean {
+    return this.selectedEspecialidades().includes(id);
+  }
+
+  toggleEspecialidad(id: number) {
+    const current = this.selectedEspecialidades();
+    if (current.includes(id)) {
+      this.selectedEspecialidades.set(current.filter(e => e !== id));
+    } else {
+      this.selectedEspecialidades.set([...current, id]);
+    }
+  }
+
+  guardarEspecialidades() {
+    const taller = this.tallerService.taller();
+    if (!taller) return;
+
+    this.saving.set(true);
+    this.tallerService.actualizarEspecialidadesTaller(taller.id, this.selectedEspecialidades()).subscribe({
+      next: () => {
+        this.saving.set(false);
+      },
+      error: () => {
+        this.saving.set(false);
+      },
+    });
+  }
+
+  openModalNuevaEspecialidad() {
+    this.nuevaEspecialidadNombre.set('');
+    this.nuevaEspecialidadDescripcion.set('');
+    this.showModalNuevaEspecialidad.set(true);
+  }
+
+  closeModalNuevaEspecialidad() {
+    this.showModalNuevaEspecialidad.set(false);
+  }
+
+  crearNuevaEspecialidad() {
+    const nombre = this.nuevaEspecialidadNombre().trim();
+    if (!nombre) return;
+
+    this.tallerService.crearEspecialidad({
+      nombre: nombre,
+      descripcion: this.nuevaEspecialidadDescripcion() || undefined
+    }).subscribe({
+      next: (esp) => {
+        this.selectedEspecialidades.update(list => [...list, esp.id]);
+        this.closeModalNuevaEspecialidad();
+        this.guardarEspecialidades();
+      },
+      error: () => {
+        alert('Error al crear especialidad');
+      }
     });
   }
 
@@ -86,6 +155,26 @@ export class Configuracion implements OnInit {
     this.latTaller.set(location.lat);
     this.lngTaller.set(location.lng);
     this.showModalUbicacion.set(false);
+  }
+
+  obtenerUbicacionActual() {
+    if (!navigator.geolocation) {
+      alert('Tu navegador no soporta geolocalización');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        this.latTaller.set(lat);
+        this.lngTaller.set(lng);
+        this.showModalUbicacion.set(false);
+      },
+      (error) => {
+        alert('No se pudo obtener su ubicación: ' + error.message);
+      }
+    );
   }
 
   guardarCambios() {

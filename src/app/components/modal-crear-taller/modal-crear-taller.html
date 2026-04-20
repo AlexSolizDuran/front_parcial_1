@@ -33,20 +33,26 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-on-surface dark:text-white mb-1">
-              Especialidad *
+            <label class="block text-sm font-medium text-on-surface dark:text-white mb-2">
+              Especialidades *
             </label>
-            <select
-              [(ngModel)]="especialidad"
-              name="especialidad"
-              required
-              class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#191c1e] text-on-surface dark:text-white"
-            >
-              <option value="">Selecciona...</option>
-              @for (esp of Especialidades; track esp) {
-                <option [value]="esp">{{ esp }}</option>
-              }
-            </select>
+            @if (especialidades.length === 0) {
+              <p class="text-sm text-gray-500">Cargando especialidades...</p>
+            } @else {
+              <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                @for (esp of especialidades; track esp.id) {
+                  <label class="flex items-center gap-2 p-2 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <input 
+                      type="checkbox" 
+                      [checked]="isSelected(esp.id)"
+                      (change)="toggleEspecialidad(esp.id)"
+                      class="w-4 h-4 text-primary"
+                    />
+                    <span class="text-sm text-on-surface dark:text-white">{{ esp.nombre }}</span>
+                  </label>
+                }
+              </div>
+            }
           </div>
 
           <div>
@@ -75,8 +81,18 @@
             />
           </div>
 
-          <input type="hidden" [(ngModel)]="lat" name="lat" />
-          <input type="hidden" [(ngModel)]="lng" name="lng" />
+          <div class="flex items-center gap-2">
+            <p class="text-sm text-on-surface dark:text-white flex-1">
+              Lat: {{ lat()?.toFixed(4) }}, Lng: {{ lng()?.toFixed(4) }}
+            </p>
+            <button
+              type="button"
+              (click)="obtenerUbicacionActual()"
+              class="px-3 py-1.5 text-xs sm:text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+            >
+              Usar mi ubicación
+            </button>
+          </div>
 
           <button
             type="submit"

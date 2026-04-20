@@ -6,13 +6,6 @@
     class="flex-1 pt-14 lg:pt-0 lg:transition-all lg:duration-300"
   >
     <app-modal-crear-taller></app-modal-crear-taller>
-    <app-modal-ubicacion
-      [show]="showModalUbicacion()"
-      [latitudInput]="latTaller()"
-      [longitudInput]="lngTaller()"
-      (closed)="closeModalUbicacion()"
-      (saved)="onUbicacionSaved($event)"
-    ></app-modal-ubicacion>
 
     <header
       class="bg-white dark:bg-[#2e3133] shadow-sm border-b border-gray-200 dark:border-gray-700"
@@ -30,7 +23,7 @@
       <div class="flex items-center justify-center h-48 sm:h-64">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
-    } @else if (!taller()) {
+    } @else if (!taller) {
       <div class="flex items-center justify-center h-48 sm:h-64">
         <p class="text-gray-500">Debes crear un taller primero</p>
       </div>
@@ -117,10 +110,10 @@
                   </p>
                   <button
                     type="button"
-                    (click)="openModalUbicacion()"
+                    (click)="obtenerUbicacionActual()"
                     class="px-3 py-1.5 text-xs sm:text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
                   >
-                    Cambiar
+                    Usar mi ubicación
                   </button>
                 </div>
               } @else {
@@ -149,6 +142,48 @@
               </div>
             }
           </div>
+        </div>
+
+        <!-- Especialidades -->
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+          <div class="flex justify-between items-center mb-4 sm:mb-4">
+            <h2 class="text-base sm:text-lg font-semibold text-on-surface dark:text-white">
+              Especialidades
+            </h2>
+            <button 
+              (click)="openModalNuevaEspecialidad()"
+              class="px-3 py-1.5 text-xs sm:text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200"
+            >
+              + Nueva
+            </button>
+          </div>
+
+          @if (especialidades.length === 0) {
+            <p class="text-sm text-gray-500">No hay especialidades disponibles</p>
+          } @else {
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              @for (esp of especialidades; track esp.id) {
+                <label class="flex items-center gap-2 p-2 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <input 
+                    type="checkbox" 
+                    [checked]="isEspecialidadSelected(esp.id)"
+                    (change)="toggleEspecialidad(esp.id)"
+                    class="w-4 h-4 text-primary"
+                  />
+                  <span class="text-sm text-on-surface dark:text-white">{{ esp.nombre }}</span>
+                </label>
+              }
+            </div>
+            <div class="mt-4">
+              <button 
+                (click)="guardarEspecialidades()"
+                [disabled]="saving()"
+                class="px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-50 text-sm"
+              >
+                {{ saving() ? 'Guardando...' : 'Guardar Especialidades' }}
+              </button>
+            </div>
+          }
         </div>
 
         <!-- Account Info -->

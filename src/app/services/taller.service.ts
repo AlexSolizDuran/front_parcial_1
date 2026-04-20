@@ -1,7 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
-import { Taller, TallerCreate, TallerUpdate } from '../models/taller.model';
+import { Taller, TallerCreate, TallerUpdate, Especialidad } from '../models/taller.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -11,14 +11,45 @@ export class TallerService {
   private http = inject(HttpClient);
 
   private apiUrl = `${environment.apiUrl}/activos/taller`;
+  private apiUrlEsp = `${environment.apiUrl}/activos/especialidades`;
 
   private _taller = signal<Taller | null>(null);
   private _loading = signal(false);
   private _showModal = signal(false);
+  private _especialidades = signal<Especialidad[]>([]);
 
   taller = this._taller.asReadonly();
   loading = this._loading.asReadonly();
   showModal = this._showModal.asReadonly();
+  especialidades = this._especialidades.asReadonly();
+
+  obtenerEspecialidades(): Observable<Especialidad[]> {
+    return this.http.get<Especialidad[]>(`${this.apiUrlEsp}/`).pipe(
+      tap((esp) => this._especialidades.set(esp))
+    );
+  }
+
+  crearEspecialidad(data: { nombre: string; descripcion?: string }): Observable<Especialidad> {
+    return this.http.post<Especialidad>(`${this.apiUrlEsp}/`, data).pipe(
+      tap((esp) => {
+        this._especialidades.update((list) => [...list, esp]);
+      })
+    );
+  }
+
+  eliminarEspecialidad(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrlEsp}/${id}`).pipe(
+      tap(() => {
+        this._especialidades.update((list) => list.filter((e) => e.id !== id));
+      })
+    );
+  }
+
+  actualizarEspecialidadesTaller(tallerId: number, especialidades: number[]): Observable<Taller> {
+    return this.http.put<Taller>(`${this.apiUrl}/${tallerId}/especialidades`, especialidades).pipe(
+      tap((taller) => this._taller.set(taller))
+    );
+  }
 
   checkMiTaller(): Observable<Taller | null> {
     this._loading.set(true);

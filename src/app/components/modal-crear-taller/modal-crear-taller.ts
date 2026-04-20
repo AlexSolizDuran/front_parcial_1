@@ -14,15 +14,57 @@ export class ModalCrearTaller implements OnInit {
   public tallerService = inject(TallerService);
 
   nombre = signal('');
-  especialidad = signal('');
   telefono = signal('');
   horario = signal('');
   lat = signal(-12.0464);
   lng = signal(-77.0428);
   loading = signal(false);
   error = signal('');
+  
+  selectedEspecialidades = signal<number[]>([]);
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.tallerService.obtenerEspecialidades().subscribe();
+  }
+
+  get especialidades() {
+    return this.tallerService.especialidades();
+  }
+
+  isSelected(id: number): boolean {
+    return this.selectedEspecialidades().includes(id);
+  }
+
+  toggleEspecialidad(id: number) {
+    const current = this.selectedEspecialidades();
+    if (current.includes(id)) {
+      this.selectedEspecialidades.set(current.filter(e => e !== id));
+    } else {
+      this.selectedEspecialidades.set([...current, id]);
+    }
+  }
+
+  obtenerUbicacionActual() {
+    if (!navigator.geolocation) {
+      alert('Tu navegador no soporta geolocalización');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.lat.set(position.coords.latitude);
+        this.lng.set(position.coords.longitude);
+      },
+      (error) => {
+        alert('No se pudo obtener tu ubicación: ' + error.message);
+      }
+    );
+  }
+
+  onUbicacionGuardada(location: { lat: number; lng: number }) {
+    this.lat.set(location.lat);
+    this.lng.set(location.lng);
+  }
 
   get showModal() {
     return this.tallerService.showModalTaller;
@@ -37,18 +79,23 @@ export class ModalCrearTaller implements OnInit {
   onSubmit() {
     this.error.set('');
 
-    if (!this.nombre() || !this.especialidad()) {
-      this.error.set('Completa los campos requeridos');
+    if (!this.nombre()) {
+      this.error.set('El nombre es requerido');
+      return;
+    }
+
+    if (this.selectedEspecialidades().length === 0) {
+      this.error.set('Selecciona al menos una especialidad');
       return;
     }
 
     const data: TallerCreate = {
       nombre: this.nombre(),
-      especialidad: this.especialidad(),
       telefono: this.telefono() || undefined,
       horario_atencion: this.horario() || undefined,
       ubicacion_lat: this.lat(),
       ubicacion_lng: this.lng(),
+      especialidades: this.selectedEspecialidades(),
     };
 
     this.loading.set(true);
@@ -62,19 +109,5 @@ export class ModalCrearTaller implements OnInit {
         this.error.set(err.error?.detail || 'Error al crear taller');
       },
     });
-  }
-
-  get Especialidades() {
-    return [
-      'Mecánica general',
-      'Electricidad',
-      'Enderezado y pintura',
-      'Cambio de aceite',
-      'Frenos',
-      'Suspensión',
-      'Transmisión',
-      'Aire acondicionado',
-      'Todo terreno',
-    ];
   }
 }
