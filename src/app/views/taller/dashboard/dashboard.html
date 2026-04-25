@@ -536,3 +536,11 @@
     (rechazar)="onRechazarIncidente($event)"
   ></app-detalle-incidente-full>
 }
+
+@if (showSeleccionarTecnicoModal() && incidenteParaAsignar()) {
+  <app-modal-seleccionar-tecnico
+    [incidenteId]="incidenteParaAsignar()!.incidente.id"
+    (tecnicoSeleccionado)="onTecnicoSeleccionado($event)"
+    (cerrar)="onCerrarSeleccionarTecnico()"
+  ></app-modal-seleccionar-tecnico>
+}

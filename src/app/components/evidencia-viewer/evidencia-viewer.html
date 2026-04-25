@@ -10,7 +10,7 @@
         <div class="main-content">
           @if (isFoto(evidenciaActual)) {
             <img 
-              [src]="evidenciaActual.url_archivo" 
+              [src]="getFullUrl(evidenciaActual.url_archivo)" 
               alt="Evidencia"
               class="main-image"
               (click)="onVerAmpliado(evidenciaActual)"
@@ -44,7 +44,7 @@
           (click)="selectEvidencia(i)"
         >
           @if (isFoto(ev)) {
-            <img [src]="ev.url_archivo" alt="Miniatura" />
+            <img [src]="getFullUrl(ev.url_archivo)" alt="Miniatura" />
           } @else {
             <span class="thumb-icon">{{ getIconoTipo(ev.tipo) }}</span>
           }

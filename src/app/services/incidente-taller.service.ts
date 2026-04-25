@@ -108,8 +108,10 @@ export class IncidenteTallerService {
   }
 
   obtenerDetalleIncidente(incidenteId: number): Observable<DetalleIncidente> {
+    const url = `${this.apiUrl}/${incidenteId}/detalle-asignado`;
+    console.log('Llamando a API:', url);
     return this.http.get<DetalleIncidente>(
-      `${this.apiUrl}/${incidenteId}/detalle-asignado`,
+      url,
       { headers: this.getHeaders() }
     );
   }

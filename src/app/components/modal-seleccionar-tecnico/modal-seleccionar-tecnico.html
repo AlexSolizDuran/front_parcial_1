@@ -1,0 +1,68 @@
+<div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" (click)="onCerrar()">
+  <div class="bg-white dark:bg-[#2e3133] rounded-xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto" (click)="$event.stopPropagation()">
+    <div class="sticky top-0 bg-blue-600 text-white p-4 rounded-t-xl">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold">Seleccionar Técnico</h2>
+        <button (click)="onCerrar()" class="text-white/80 hover:text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <p class="text-sm text-white/80 mt-1">Incidente #{{ incidenteId }}</p>
+    </div>
+
+    <div class="p-4">
+      @if (loading()) {
+        <div class="flex justify-center py-8">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      } @else if (tecnicos().length === 0) {
+        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+          No hay técnicos disponibles
+        </div>
+      } @else {
+        <div class="space-y-2">
+          @for (tecnico of tecnicos(); track tecnico.id) {
+            <div
+              (click)="seleccionarTecnico(tecnico.id)"
+              class="p-3 rounded-lg border-2 cursor-pointer transition-colors"
+              [class.border-blue-500]="selectedTecnicoId() === tecnico.id"
+              [class.border-gray-200]="selectedTecnicoId() !== tecnico.id"
+              [class.dark:border-gray-600]="selectedTecnicoId() !== tecnico.id"
+              [class.bg-blue-50]="selectedTecnicoId() === tecnico.id"
+              [class.dark:bg-blue-900/20]="selectedTecnicoId() === tecnico.id"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-medium">{{ getNombreTecnico(tecnico) }}</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ tecnico.usuario?.telefono || 'Sin teléfono' }}
+                  </p>
+                </div>
+                <span [class]="isDisponible(tecnico) ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-500'"
+                      class="px-2 py-1 text-xs rounded-full">
+                  {{ isDisponible(tecnico) ? 'Disponible' : 'Ocupado' }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="sticky bottom-0 bg-gray-50 dark:bg-[#191c1e] p-4 rounded-b-xl border-t">
+      <div class="flex gap-3">
+        <button (click)="onCerrar()" class="flex-1 bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition">
+          Cancelar
+        </button>
+        <button
+          (click)="confirmarSeleccion()"
+          [disabled]="!selectedTecnicoId()"
+          class="flex-1 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed">
+          Asignar Técnico
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

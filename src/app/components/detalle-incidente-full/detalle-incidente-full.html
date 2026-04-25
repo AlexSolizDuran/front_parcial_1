@@ -58,8 +58,8 @@
           <h4 class="text-sm font-semibold mb-2">Fotos</h4>
           <div class="grid grid-cols-3 gap-2">
             @for (ev of getEvidenciasFotos(); track ev.id) {
-              <a [href]="ev.url_archivo" target="_blank" class="block rounded-lg overflow-hidden">
-                <img [src]="ev.url_archivo" [alt]="ev.descripcion || 'Evidencia'" class="w-full h-24 object-cover hover:opacity-80 transition">
+              <a [href]="getFullUrl(ev.url_archivo)" target="_blank" class="block rounded-lg overflow-hidden">
+                <img [src]="getFullUrl(ev.url_archivo)" [alt]="ev.descripcion || 'Evidencia'" class="w-full h-24 object-cover hover:opacity-80 transition">
               </a>
             }
           </div>
@@ -72,7 +72,7 @@
           @for (ev of getEvidenciasAudio(); track ev.id) {
             <div class="bg-gray-50 dark:bg-[#191c1e] rounded-lg p-3">
               <audio controls class="w-full">
-                <source [src]="ev.url_archivo" type="audio/mpeg">
+                <source [src]="getFullUrl(ev.url_archivo)" type="audio/mpeg">
               </audio>
               @if (ev.transcripcion) {
                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ ev.transcripcion }}</p>

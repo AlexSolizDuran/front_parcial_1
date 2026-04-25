@@ -1,6 +1,7 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Evidencia } from '../../models/incidente-asignado.model';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-evidencia-viewer',
@@ -13,10 +14,19 @@ export class EvidenciaViewerComponent {
   @Input() evidencias: Evidencia[] = [];
   @Output() verAmpliado = new EventEmitter<Evidencia>();
 
+  private apiUrl = environment.apiUrl;
   selectedIndex = 0;
 
   get evidenciaActual(): Evidencia | null {
     return this.evidencias[this.selectedIndex] || null;
+  }
+
+  getFullUrl(url: string | null | undefined): string {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `${this.apiUrl}${url}`;
   }
 
   selectEvidencia(index: number) {
@@ -49,8 +59,9 @@ export class EvidenciaViewerComponent {
   }
 
   playAudio(evidencia: Evidencia) {
-    if (evidencia.url_archivo) {
-      const audio = new Audio(evidencia.url_archivo);
+    const url = this.getFullUrl(evidencia.url_archivo);
+    if (url) {
+      const audio = new Audio(url);
       audio.play();
     }
   }

@@ -221,3 +221,35 @@
   background: #10b981;
   color: white;
 }
+
+/* AI Analysis Sections */
+.ai-section {
+  padding: 16px;
+  background: #eff6ff;
+  border-radius: 12px;
+  border: 1px solid #bfdbfe;
+}
+
+.ai-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.ai-content {
+  font-size: 14px;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+/* Error state */
+.error-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.error-state p {
+  margin-bottom: 16px;
+}

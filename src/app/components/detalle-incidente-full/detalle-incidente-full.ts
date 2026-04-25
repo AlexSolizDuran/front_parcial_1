@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, inject, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IncidenteTallerService, AsignacionPendiente, Evidencia } from '../../services/incidente-taller.service';
+import { environment } from '../../../environments/environment';
 import * as L from 'leaflet';
 
 @Component({
@@ -21,10 +22,20 @@ export class DetalleIncidenteFullComponent implements OnInit, AfterViewInit {
   private map: L.Map | null = null;
   private marker: L.Marker | null = null;
 
-  ngOnInit() {}
+  private apiUrl = environment.apiUrl;
 
+  ngOnInit() {}
+  
   ngAfterViewInit() {
     setTimeout(() => this.initMap(), 100);
+  }
+
+  getFullUrl(url: string | null | undefined): string {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `${this.apiUrl}${url}`;
   }
 
   private initMap() {

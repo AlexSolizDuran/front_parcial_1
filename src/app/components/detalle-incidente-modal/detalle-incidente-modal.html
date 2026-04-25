@@ -1,25 +1,25 @@
 <div class="modal-overlay" (click)="onCerrar()">
   <div class="modal-content" (click)="$event.stopPropagation()">
-    @if (loading) {
-      <div class="loading">
-        <div class="spinner"></div>
-        <p>Cargando detalles...</p>
-      </div>
-    } @else {
-      <div class="modal-header">
-        <h2>Incidente #{{ incidente?.id || detalle?.id }}</h2>
-        <button class="close-btn" (click)="onCerrar()">✕</button>
-      </div>
+@if (loading()) {
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>Cargando detalles...</p>
+  </div>
+} @else if (detalle) {
+  <div class="modal-header">
+    <h2>Incidente #{{ incidente?.id || detalle?.id }}</h2>
+    <button class="close-btn" (click)="onCerrar()">✕</button>
+  </div>
 
-      <div class="modal-body">
-        <app-mapa-incidente
-          [lat]="detalle?.ubicacion_lat || incidente?.ubicacion_lat || 0"
-          [lng]="detalle?.ubicacion_lng || incidente?.ubicacion_lng || 0"
-          [titulo]="'Ubicación del incidente'"
-          [tecnicoLat]="detalle?.tecnico?.ubicacion_lat || incidente?.asignacion?.tecnico?.ubicacion_lat || null"
-          [tecnicoLng]="detalle?.tecnico?.ubicacion_lng || incidente?.asignacion?.tecnico?.ubicacion_lng || null"
-          [tecnicoNombre]="detalle?.tecnico?.nombre || incidente?.asignacion?.tecnico?.nombre || null"
-        ></app-mapa-incidente>
+  <div class="modal-body">
+    <app-mapa-incidente
+      [lat]="detalle?.ubicacion_lat || incidente?.ubicacion_lat || 0"
+      [lng]="detalle?.ubicacion_lng || incidente?.ubicacion_lng || 0"
+      [titulo]="'Ubicación del incidente'"
+      [tecnicoLat]="detalle?.tecnico?.ubicacion_lat || incidente?.asignacion?.tecnico?.ubicacion_lat || null"
+      [tecnicoLng]="detalle?.tecnico?.ubicacion_lng || incidente?.asignacion?.tecnico?.ubicacion_lng || null"
+      [tecnicoNombre]="detalle?.tecnico?.nombre || incidente?.asignacion?.tecnico?.nombre || null"
+    ></app-mapa-incidente>
 
         <div class="badges">
           <span [class]="getColorEstado()" class="badge">
@@ -29,6 +29,33 @@
             {{ getLabelPrioridad() }}
           </span>
         </div>
+
+        @if (detalle?.especialidad_ia) {
+          <section class="info-section ai-section">
+            <h3>🤖 Análisis IA - Especialidad</h3>
+            <div class="ai-content">
+              <p>{{ detalle.especialidad_ia }}</p>
+            </div>
+          </section>
+        }
+
+        @if (detalle?.descripcion_ia) {
+          <section class="info-section ai-section">
+            <h3>🤖 Análisis IA - Descripción</h3>
+            <div class="ai-content">
+              <p>{{ detalle.descripcion_ia }}</p>
+            </div>
+          </section>
+        }
+
+        @if (detalle?.descripcion_original) {
+          <section class="info-section">
+            <h3>📝 Descripción Original</h3>
+            <div class="info-row">
+              <p>{{ detalle.descripcion_original }}</p>
+            </div>
+          </section>
+        }
 
         <section class="info-section">
           <h3>👤 Cliente</h3>
@@ -94,11 +121,16 @@
           }
         </section>
       </div>
+    } @else {
+      <div class="error-state">
+        <p>No se encontró información del incidente</p>
+        <button class="close-btn" (click)="onCerrar()">Cerrar</button>
+      </div>
     }
   </div>
 </div>
 
-@if (!loading && detalle) {
+@if (!loading() && detalle) {
   <div class="modal-footer">
     <div class="estado-actions">
       @if (detalle.estado === 'asignado') {

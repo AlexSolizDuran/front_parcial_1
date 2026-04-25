@@ -1,11 +1,11 @@
-import { Component, Input, Output, EventEmitter, OnInit, inject, OnDestroy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DetalleIncidente, IncidenteAsignado } from '../../models/incidente-asignado.model';
 import { IncidenteTallerService } from '../../services/incidente-taller.service';
 import { MapaIncidenteComponent } from '../mapa-incidente/mapa-incidente';
 import { EvidenciaViewerComponent } from '../evidencia-viewer/evidencia-viewer';
 import { HistorialTimelineComponent } from '../historial-timeline/historial-timeline';
-import { firstValueFrom, timeout } from 'rxjs';
+import { firstValueFrom, timeout, catchError } from 'rxjs';
 
 @Component({
   selector: 'app-detalle-incidente-modal',
@@ -19,63 +19,65 @@ import { firstValueFrom, timeout } from 'rxjs';
   templateUrl: './detalle-incidente-modal.html',
   styleUrl: './detalle-incidente-modal.css',
 })
-export class DetalleIncidenteModalComponent implements OnInit, OnDestroy {
-  @Input() incidente: IncidenteAsignado | null = null;
+export class DetalleIncidenteModalComponent implements OnDestroy {
+  private service = inject(IncidenteTallerService);
+
+  detalle: DetalleIncidente | null = null;
+  loading = signal(false);
+  private incidenteId: number = 0;
+  private _incidente: IncidenteAsignado | null = null;
+
+  // Setter for incidente to ensure proper change detection
+  @Input()
+  set incidente(value: IncidenteAsignado | null) {
+    console.log('Setter incidente llamado con:', value?.id, 'valor anterior:', this._incidente?.id);
+    this._incidente = value;
+    this.detalle = null;
+    this.loading.set(false);
+    if (value?.id) {
+      this.incidenteId = value.id;
+      this.cargarDetalle();
+    }
+  }
+
+  get incidente(): IncidenteAsignado | null {
+    return this._incidente;
+  }
+
   @Input() tallerId: number = 0;
   @Output() cerrar = new EventEmitter<void>();
   @Output() estadoCambiado = new EventEmitter<number>();
 
-  private service = inject(IncidenteTallerService);
+  ngOnDestroy() {}
 
-  detalle: DetalleIncidente | null = null;
-  loading = true;
-  private incidenteId: number = 0;
-  private loadingTimeout: any = null;
-
-  ngOnInit() {
-    if (this.incidente?.id) {
-      this.incidenteId = this.incidente.id;
-      this.cargarDetalle();
-    } else if (this.tallerId) {
-      this.cargarDetalle();
-    }
-  }
-
-  ngOnDestroy() {
-    if (this.loadingTimeout) {
-      clearTimeout(this.loadingTimeout);
-    }
-  }
-
-  async cargarDetalle() {
+  private async cargarDetalle() {
     if (!this.incidenteId) {
-      this.loading = false;
+      console.warn('No hay incidenteId válido, cancelando carga');
+      this.loading.set(false);
       return;
     }
-    
-    this.loading = true;
-    
-    this.loadingTimeout = setTimeout(() => {
-      if (this.loading) {
-        console.warn('Timeout al cargar detalle del incidente');
-        this.loading = false;
-      }
-    }, 10000);
-    
+
+    console.log('Cargando detalle de incidente ID:', this.incidenteId);
+    this.loading.set(true);
+    this.detalle = null;
+
     try {
       const data = await firstValueFrom(
         this.service.obtenerDetalleIncidente(this.incidenteId).pipe(
-          timeout(8000)
+          timeout(10000),
+          catchError(err => {
+            console.error('Error en Observable:', err);
+            throw err;
+          })
         )
       );
+      console.log('Respuesta exitosa del backend:', data);
       this.detalle = data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error al cargar detalle:', error);
     } finally {
-      if (this.loadingTimeout) {
-        clearTimeout(this.loadingTimeout);
-      }
-      this.loading = false;
+      console.log('Finalizando carga, setting loading=false');
+      this.loading.set(false);
     }
   }
 
@@ -117,6 +119,21 @@ export class DetalleIncidenteModalComponent implements OnInit, OnDestroy {
     return `${v.marca || ''} ${v.modelo || ''} ${v.patente || ''}`.trim();
   }
 
+  getVehiculoDesc(): string {
+    return this.getVehiculo();
+  }
+
+  getVehiculoPatente(): string | null {
+    const v = this.detalle?.vehiculo || this.incidente?.vehiculo;
+    return v?.patente || null;
+  }
+
+  getTecnicoTelefono(): string | null {
+    return this.detalle?.tecnico?.telefono || 
+           this.incidente?.asignacion?.tecnico?.telefono || 
+           null;
+  }
+
   getTecnicoNombre(): string {
     return this.detalle?.tecnico?.nombre || this.incidente?.asignacion?.tecnico?.nombre || 'Sin asignar';
   }
@@ -131,6 +148,13 @@ export class DetalleIncidenteModalComponent implements OnInit, OnDestroy {
 
   llamarCliente() {
     const telefono = this.getClienteTelefono();
+    if (telefono) {
+      window.open(`tel:${telefono}`, '_self');
+    }
+  }
+
+  llamarTecnico() {
+    const telefono = this.getTecnicoTelefono();
     if (telefono) {
       window.open(`tel:${telefono}`, '_self');
     }

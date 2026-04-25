@@ -14,6 +14,7 @@ import { Sidebar } from '../../../components/sidebar/sidebar';
 import { DetalleIncidenteModalComponent } from '../../../components/detalle-incidente-modal/detalle-incidente-modal';
 import { IncidentePendienteCardComponent } from '../../../components/incidente-pendiente-card/incidente-pendiente-card';
 import { DetalleIncidenteFullComponent } from '../../../components/detalle-incidente-full/detalle-incidente-full';
+import { ModalSeleccionarTecnicoComponent } from '../../../components/modal-seleccionar-tecnico/modal-seleccionar-tecnico';
 import { Incidente } from '../../../models/incidente.model';
 import { Tecnico } from '../../../models/tecnico.model';
 import { HistorialTaller } from '../../../models/historial-taller.model';
@@ -31,7 +32,7 @@ interface Estadisticas {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ModalCrearTaller, Sidebar, DetalleIncidenteModalComponent, IncidentePendienteCardComponent, DetalleIncidenteFullComponent],
+  imports: [CommonModule, ModalCrearTaller, Sidebar, DetalleIncidenteModalComponent, IncidentePendienteCardComponent, DetalleIncidenteFullComponent, ModalSeleccionarTecnicoComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
@@ -76,6 +77,9 @@ incidentesDelDia = signal<IncidentesDelDia>({
 
   asignacionPendiente = signal<AsignacionPendiente | null>(null);
   showDetallePendienteModal = signal(false);
+
+  showSeleccionarTecnicoModal = signal(false);
+  incidenteParaAsignar = signal<AsignacionPendiente | null>(null);
 
   loading = signal(true);
   showNotificationPanel = signal(false);
@@ -137,16 +141,34 @@ incidentesDelDia = signal<IncidentesDelDia>({
   }
 
   onAceptarIncidente(asignacionId: number) {
-    this.incidenteTallerService.aceptarAsignacion(asignacionId).subscribe({
+    const asignacion = this.asignacionPendiente();
+    if (asignacion && asignacion.asignacion.id === asignacionId) {
+      this.incidenteParaAsignar.set(asignacion);
+    }
+    this.showSeleccionarTecnicoModal.set(true);
+  }
+
+  onTecnicoSeleccionado(tecnicoId: number) {
+    const asignacion = this.incidenteParaAsignar();
+    if (!asignacion) return;
+
+    this.incidenteTallerService.asignarTecnicoIncidente(asignacion.incidente.id, tecnicoId).subscribe({
       next: () => {
+        this.showSeleccionarTecnicoModal.set(false);
+        this.incidenteParaAsignar.set(null);
         this.asignacionPendiente.set(null);
         this.showDetallePendienteModal.set(false);
         this.cargarDatos();
       },
       error: (err) => {
-        console.error('Error al aceptar:', err);
+        console.error('Error al aceptar y asignar:', err);
       }
     });
+  }
+
+  onCerrarSeleccionarTecnico() {
+    this.showSeleccionarTecnicoModal.set(false);
+    this.incidenteParaAsignar.set(null);
   }
 
   onRechazarIncidente(asignacionId: number) {
