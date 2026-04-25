@@ -2,6 +2,7 @@ import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
 import { Taller, TallerCreate, TallerUpdate, Especialidad } from '../models/taller.model';
+import { HistorialTaller } from '../models/historial-taller.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -112,5 +113,9 @@ export class TallerService {
   reset() {
     this._taller.set(null);
     this._showModal.set(false);
+  }
+
+  obtenerHistorialTaller(tallerId: number): Observable<HistorialTaller[]> {
+    return this.http.get<HistorialTaller[]>(`${this.apiUrl}/${tallerId}/historial`);
   }
 }

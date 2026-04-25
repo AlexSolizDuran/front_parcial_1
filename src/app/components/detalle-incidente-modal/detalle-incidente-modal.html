@@ -1,0 +1,121 @@
+<div class="modal-overlay" (click)="onCerrar()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    @if (loading) {
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Cargando detalles...</p>
+      </div>
+    } @else {
+      <div class="modal-header">
+        <h2>Incidente #{{ incidente?.id || detalle?.id }}</h2>
+        <button class="close-btn" (click)="onCerrar()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <app-mapa-incidente
+          [lat]="detalle?.ubicacion_lat || incidente?.ubicacion_lat || 0"
+          [lng]="detalle?.ubicacion_lng || incidente?.ubicacion_lng || 0"
+          [titulo]="'Ubicación del incidente'"
+          [tecnicoLat]="detalle?.tecnico?.ubicacion_lat || incidente?.asignacion?.tecnico?.ubicacion_lat || null"
+          [tecnicoLng]="detalle?.tecnico?.ubicacion_lng || incidente?.asignacion?.tecnico?.ubicacion_lng || null"
+          [tecnicoNombre]="detalle?.tecnico?.nombre || incidente?.asignacion?.tecnico?.nombre || null"
+        ></app-mapa-incidente>
+
+        <div class="badges">
+          <span [class]="getColorEstado()" class="badge">
+            {{ getLabelEstado() }}
+          </span>
+          <span [class]="getColorPrioridad()" class="badge">
+            {{ getLabelPrioridad() }}
+          </span>
+        </div>
+
+        <section class="info-section">
+          <h3>👤 Cliente</h3>
+          <div class="info-row">
+            <span class="label">Nombre:</span>
+            <span class="value">{{ getClienteNombre() }}</span>
+            @if (getClienteTelefono()) {
+              <button class="call-btn" (click)="llamarCliente()">
+                📞
+              </button>
+            }
+          </div>
+        </section>
+
+        <section class="info-section">
+          <h3>🚗 Vehículo</h3>
+          <div class="info-row">
+            <span class="label">Detalles:</span>
+            <span class="value">{{ getVehiculoDesc() }}</span>
+          </div>
+          @if (getVehiculoPatente()) {
+            <div class="info-row">
+              <span class="label">Patente:</span>
+              <span class="value">{{ getVehiculoPatente() }}</span>
+            </div>
+          }
+        </section>
+
+        @if (detalle?.tecnico || incidente?.asignacion?.tecnico) {
+          <section class="info-section tecnico">
+            <h3>🔧 Técnico Asignado</h3>
+            <div class="info-row">
+              <span class="label">Nombre:</span>
+              <span class="value">{{ getTecnicoNombre() }}</span>
+              @if (getTecnicoTelefono()) {
+                <button class="call-btn" (click)="llamarTecnico()">
+                  📞
+                </button>
+              }
+            </div>
+          </section>
+        }
+
+        <section class="info-section">
+          <h3>📎 Evidencias ({{ detalle?.evidencias?.length || incidente?.total_evidencias || 0 }})</h3>
+          @if (detalle?.evidencias?.length) {
+            <app-evidencia-viewer
+              [evidencias]="detalle!.evidencias"
+            ></app-evidencia-viewer>
+          } @else {
+            <p class="text-gray-500">No hay evidencias disponibles</p>
+          }
+        </section>
+
+        <section class="info-section">
+          <h3>📋 Historial</h3>
+          @if (detalle?.historial?.length) {
+            <app-historial-timeline
+              [historial]="detalle!.historial"
+            ></app-historial-timeline>
+          } @else {
+            <p class="text-gray-500">No hay historial disponible</p>
+          }
+        </section>
+      </div>
+    }
+  </div>
+</div>
+
+@if (!loading && detalle) {
+  <div class="modal-footer">
+    <div class="estado-actions">
+      @if (detalle.estado === 'asignado') {
+        <button class="btn-action btn-en-camino" (click)="cambiarEstado('en_camino')">
+          🚗 En Camino
+        </button>
+      }
+      @if (detalle.estado === 'en_camino') {
+        <button class="btn-action btn-en-sitio" (click)="cambiarEstado('en_sitio')">
+          🔧 En Sitio
+        </button>
+      }
+      @if (detalle.estado === 'en_sitio') {
+        <button class="btn-action btn-finalizar" (click)="cambiarEstado('finalizado')">
+          ✅ Finalizar
+        </button>
+      }
+    </div>
+  </div>
+}

@@ -22,6 +22,31 @@
             }
           </div>
           <div class="flex items-center gap-2 sm:gap-4">
+            <!-- Notification Bell -->
+            <button
+              (click)="toggleNotificationPanel()"
+              class="relative p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              @if (newNotificationCount() > 0) {
+                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {{ newNotificationCount() > 9 ? '9+' : newNotificationCount() }}
+                </span>
+              }
+            </button>
+            <!-- Connection Status -->
+            <div class="flex items-center gap-2">
+              <span
+                [class]="isWsConnected() ? 'bg-green-500' : 'bg-red-500'"
+                class="w-2 h-2 rounded-full"
+              ></span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
+                {{ isWsConnected() ? 'En línea' : 'Desconectado' }}
+              </span>
+            </div>
             <span class="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400">
               {{ user()?.nombre }}
             </span>
@@ -29,6 +54,121 @@
         </div>
       </div>
     </header>
+
+    <!-- Notification Panel Overlay -->
+    @if (showNotificationPanel()) {
+      <div class="fixed inset-0 z-40 bg-black/50" (click)="toggleNotificationPanel()"></div>
+    }
+
+    <!-- Notification Panel -->
+    <div
+      [class]="showNotificationPanel() ? 'translate-x-0' : 'translate-x-full'"
+      class="fixed right-0 top-0 h-full w-80 sm:w-96 bg-white dark:bg-[#2e3133] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out overflow-hidden flex flex-col"
+    >
+      <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-bold text-on-surface dark:text-white">Notificaciones</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            {{ isWsConnected() ? 'Tiempo real activo' : 'Sin conexión' }}
+          </p>
+        </div>
+        <button
+          (click)="toggleNotificationPanel()"
+          class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+        >
+          <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto">
+        @if (historialTaller().length > 0) {
+          <div class="p-2">
+            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase px-2 py-2">
+              Actividad del Taller
+            </h4>
+            @for (item of historialTaller(); track item.id) {
+              <div
+                [class]="getNotificacionColor(item.tipo)"
+                class="border rounded-lg p-3 mb-2 mx-1"
+              >
+                <div class="flex items-start gap-2">
+                  <span class="text-lg">{{ getNotificacionIcon(item.tipo) }}</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <span class="font-medium text-xs">{{ item.titulo }}</span>
+                      <span class="text-xs opacity-70">{{ formatTime(item.fecha) }}</span>
+                    </div>
+                    <p class="text-xs mt-1 opacity-80">{{ item.descripcion }}</p>
+                    <span class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-white/50">
+                      {{ getNotificacionLabel(item.tipo) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (wsNotifications().length > 0) {
+          <div class="p-2 border-t border-gray-200 dark:border-gray-700">
+            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase px-2 py-2">
+              Tiempo Real
+            </h4>
+            @for (notif of wsNotifications(); track notif.id) {
+              <div
+                class="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mb-2 mx-1"
+              >
+                <div class="flex items-start gap-2">
+                  <span class="text-lg">{{ getNotificacionIcon(notif.tipo) }}</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <span class="font-medium text-xs">{{ notif.titulo }}</span>
+                      @if (notif.timestamp) {
+                        <span class="text-xs opacity-70">{{ formatTime(notif.timestamp) }}</span>
+                      }
+                    </div>
+                    <p class="text-xs mt-1 opacity-80">{{ notif.descripcion }}</p>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (historialTaller().length === 0 && wsNotifications().length === 0) {
+          <div class="flex flex-col items-center justify-center h-full p-8 text-center">
+            <svg class="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">No hay notificaciones</p>
+            <p class="text-gray-400 dark:text-gray-500 text-xs mt-1">
+              Recibirás alertas cuando se asignen incidentes
+            </p>
+          </div>
+        }
+      </div>
+
+      <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#191c1e]">
+        @if (isWsConnected()) {
+          <button
+            (click)="desconectarWebSocket()"
+            class="w-full px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          >
+            Desconectar Tiempo Real
+          </button>
+        } @else {
+          <button
+            (click)="conectarWebSocket()"
+            class="w-full px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+          >
+            Conectar Tiempo Real
+          </button>
+        }
+      </div>
+    </div>
 
     @if (taller()) {
       <!-- Taller Info Banner -->
@@ -197,75 +337,177 @@
         </div>
       </div>
 
-      <!-- Recent Notifications -->
-      <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm overflow-hidden">
-        <div class="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 class="text-base sm:text-lg font-semibold text-on-surface dark:text-white">
-            Solicitudes Recientes
-          </h2>
+      <!-- Badge Incidentes Hoy -->
+      @if (incidentesDelDia().total_hoy > 0) {
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-3 sm:p-4 mb-4 sm:mb-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base sm:text-lg font-semibold text-on-surface dark:text-white">
+              Incidentes del Día
+            </h2>
+            <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm font-medium rounded-full">
+              {{ getBadgeIncidentesHoy() }}
+            </span>
+          </div>
         </div>
+      }
+
+      <!-- Incidentes Asignados Section -->
+      @if (incidentesDelDia().incidentes.length > 0) {
+        <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm overflow-hidden mb-4 sm:mb-6">
+          <div class="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-base sm:text-lg font-semibold text-on-surface dark:text-white">
+              Incidentes Asignados
+            </h2>
+          </div>
+          <div class="divide-y divide-gray-200 dark:divide-gray-700">
+            @for (incidente of incidentesDelDia().incidentes; track incidente.id) {
+              <div 
+                (click)="abrirDetalleIncidente(incidente)"
+                class="px-3 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="font-medium text-on-surface dark:text-white">#{{ incidente.id }}</span>
+                      @if (incidente.prioridad) {
+                        <span class="px-2 py-0.5 text-xs rounded-full {{ getPrioridadColor(incidente.prioridad) }}">
+                          {{ incidente.prioridad }}
+                        </span>
+                      }
+                      <span class="px-2 py-0.5 text-xs rounded-full {{ getEstadoIncidenteColor(incidente.estado) }}">
+                        {{ getLabelEstado(incidente.estado) }}
+                      </span>
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 truncate">
+                      {{ incidente.descripcion_ia || incidente.descripcion }}
+                    </p>
+                    @if (incidente.cliente) {
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Cliente: {{ incidente.cliente.nombre }} • {{ incidente.cliente.telefono }}
+                      </p>
+                    }
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    @if (incidente.fecha_creacion) {
+                      <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ formatDate(incidente.fecha_creacion) }}
+                      </p>
+                    }
+                    @if (incidente.asignacion?.tecnico) {
+                      <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        Tec: {{ incidente.asignacion!.tecnico!.nombre }}
+                      </p>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Map Section -->
+      <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm overflow-hidden mb-4 sm:mb-6">
+        <div class="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base sm:text-lg font-semibold text-on-surface dark:text-white">
+              Mapa de Incidentes y Técnicos
+            </h2>
+            <div class="flex items-center gap-3 text-xs">
+              <div class="flex items-center gap-1">
+                <span class="w-3 h-3 bg-blue-500 rounded-full"></span>
+                <span>Incidentes</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                <span>Técnicos disponibles</span>
+              </div>
+              <button
+                (click)="recargarMapa()"
+                class="ml-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg flex items-center gap-1 transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Recargar
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="mapa-dashboard" class="w-full" style="height: 350px;"></div>
+      </div>
+
+      <!-- Recent Notifications -->
+      <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm overflow-hidden mb-4">
+        <div class="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base sm:text-lg font-semibold text-on-surface dark:text-white">
+              Dashboard del Taller
+            </h2>
+            <button (click)="reloadData()" class="text-primary hover:text-primary/80">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Recargar
+            </button>
+          </div>
+        </div>
+        @if (asignacionPendiente()) {
+          <app-incidente-pendiente-card
+            [asignacionPendiente]="asignacionPendiente()!"
+            (aceptar)="onAceptarIncidente($event)"
+            (rechazar)="onRechazarIncidente($event)"
+            (verDetalles)="onVerDetallesPendiente()"
+            (expirado)="onIncidenteExpirado()"
+          ></app-incidente-pendiente-card>
+        }
 
         <div class="overflow-x-auto">
           <table class="w-full min-w-[500px]">
             <thead class="bg-gray-50 dark:bg-[#191c1e]">
               <tr>
                 <th class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Cliente
+                  ID
                 </th>
                 <th class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Vehículo
+                  Título
                 </th>
-                <th
-                  class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell"
-                >
+                <th class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">
                   Tipo
                 </th>
-                <th
-                  class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell"
-                >
-                  Descripción
+                <th class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">
+                  Mensaje
                 </th>
                 <th class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Estado
                 </th>
-                <th
-                  class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell"
-                >
+                <th class="px-3 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">
                   Fecha
                 </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              @for (nota of notificaciones(); track nota.id) {
+              @for (nota of notificacionesBD(); track nota.id) {
                 <tr class="hover:bg-gray-50 dark:hover:bg-[#191c1e]">
                   <td class="px-3 py-3 text-xs sm:text-sm text-on-surface dark:text-white">
-                    {{ nota.cliente }}
+                    #{{ nota.id }}
                   </td>
                   <td class="px-3 py-3 text-xs sm:text-sm text-on-surface dark:text-white">
-                    {{ nota.vehiculo }}
+                    {{ nota.titulo }}
                   </td>
-                  <td
-                    class="px-3 py-3 text-xs sm:text-sm text-on-surface dark:text-white hidden sm:table-cell"
-                  >
+                  <td class="px-3 py-3 text-xs sm:text-sm text-on-surface dark:text-white hidden sm:table-cell">
                     {{ nota.tipo }}
                   </td>
-                  <td
-                    class="px-3 py-3 text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 hidden md:table-cell"
-                  >
-                    {{ nota.descripcion }}
+                  <td class="px-3 py-3 text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 hidden md:table-cell">
+                    {{ nota.mensaje }}
                   </td>
                   <td class="px-3 py-3">
-                    <span
-                      [class]="getEstadoColor(nota.estado)"
-                      class="px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full"
-                    >
-                      {{ getEstadoLabel(nota.estado) }}
+                    <span [class]="nota.leido ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'" class="px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full">
+                      {{ nota.leido ? 'Leída' : 'Nueva' }}
                     </span>
                   </td>
-                  <td
-                    class="px-3 py-3 text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 hidden lg:table-cell"
-                  >
-                    {{ formatDate(nota.created_at) }}
+                  <td class="px-3 py-3 text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 hidden lg:table-cell">
+                    {{ formatDate(nota.fecha_envio) }}
                   </td>
                 </tr>
               }
@@ -276,3 +518,21 @@
     </main>
   </div>
 </div>
+
+@if (showDetalleModal()) {
+  <app-detalle-incidente-modal
+    [incidente]="incidenteSeleccionado()"
+    [tallerId]="taller()?.id || 0"
+    (cerrar)="cerrarDetalleIncidente()"
+    (estadoCambiado)="onEstadoCambiado($event)"
+  ></app-detalle-incidente-modal>
+}
+
+@if (showDetallePendienteModal() && asignacionPendiente()) {
+  <app-detalle-incidente-full
+    [asignacion]="asignacionPendiente()!"
+    (cerrar)="onCerrarDetallePendiente()"
+    (aceptar)="onAceptarIncidente($event)"
+    (rechazar)="onRechazarIncidente($event)"
+  ></app-detalle-incidente-full>
+}

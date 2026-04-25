@@ -1,0 +1,55 @@
+<div class="evidencia-container">
+  @if (evidencias.length === 0) {
+    <div class="empty">
+      <span class="empty-icon">📎</span>
+      <p>Sin evidencias</p>
+    </div>
+  } @else {
+    <div class="evidencia-main">
+      @if (evidenciaActual) {
+        <div class="main-content">
+          @if (isFoto(evidenciaActual)) {
+            <img 
+              [src]="evidenciaActual.url_archivo" 
+              alt="Evidencia"
+              class="main-image"
+              (click)="onVerAmpliado(evidenciaActual)"
+            />
+          } @else if (isAudio(evidenciaActual)) {
+            <div class="audio-player">
+              <button class="play-btn" (click)="playAudio(evidenciaActual)">
+                ▶️ Reproducir audio
+              </button>
+              @if (evidenciaActual.transcripcion) {
+                <p class="transcripcion">{{ evidenciaActual.transcripcion }}</p>
+              }
+            </div>
+          } @else if (isTexto(evidenciaActual)) {
+            <div class="texto-content">
+              <p>{{ evidenciaActual.contenido }}</p>
+            </div>
+          }
+          @if (evidenciaActual.descripcion) {
+            <p class="descripcion">{{ evidenciaActual.descripcion }}</p>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="thumbnails">
+      @for (ev of evidencias; track ev.id; let i = $index) {
+        <button 
+          class="thumb" 
+          [class.active]="i === selectedIndex"
+          (click)="selectEvidencia(i)"
+        >
+          @if (isFoto(ev)) {
+            <img [src]="ev.url_archivo" alt="Miniatura" />
+          } @else {
+            <span class="thumb-icon">{{ getIconoTipo(ev.tipo) }}</span>
+          }
+        </button>
+      }
+    </div>
+  }
+</div>

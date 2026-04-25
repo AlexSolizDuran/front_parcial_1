@@ -10,7 +10,7 @@ import { environment } from '../../environments/environment';
 export class TecnicoService {
   private http = inject(HttpClient);
 
-  private apiUrl = `${environment.apiUrl}/usuarios/tecnico`;
+  private apiUrl = `${environment.apiUrl}/usuarios/tecnicos`;
 
   private _tecnicos = signal<Tecnico[]>([]);
   private _loading = signal(false);

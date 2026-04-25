@@ -51,6 +51,16 @@ export class IncidenteService {
     );
   }
 
+  obtenerIncidentesTaller(tallerId: number, estado?: string): Observable<Incidente[]> {
+    let url = `${this.apiUrl}/taller/${tallerId}`;
+    if (estado) {
+      url += `?estado=${estado}`;
+    }
+    return this.http.get<Incidente[]>(url, {
+      headers: this.getHeaders()
+    });
+  }
+
   obtenerIncidente(id: number): Observable<Incidente> {
     return this.http.get<Incidente>(`${this.apiUrl}/${id}`, {
       headers: this.getHeaders()

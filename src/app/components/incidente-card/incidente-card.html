@@ -1,0 +1,55 @@
+<div class="card" (click)="onVerDetalle()">
+  <div class="card-header">
+    <div class="header-left">
+      <span class="estado-icono">{{ getEstadoIcono() }}</span>
+      <span class="incidente-id">#{{ incidente.id }}</span>
+    </div>
+    <div class="header-right">
+      <span [class]="getColorEstado()" class="badge">
+        {{ getLabelEstado() }}
+      </span>
+      <span [class]="getColorPrioridad()" class="badge prioridad">
+        {{ getLabelPrioridad() }}
+      </span>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <p class="descripcion">{{ incidente.descripcion_ia || incidente.descripcion || 'Sin descripción' }}</p>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-icon">👤</span>
+        <span class="info-text">{{ getClienteNombre() }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-icon">🚗</span>
+        <span class="info-text">{{ getVehiculoDesc() }}</span>
+      </div>
+      @if (incidente.asignacion?.tecnico) {
+        <div class="info-item tecnico">
+          <span class="info-icon">🔧</span>
+          <span class="info-text">{{ getTecnicoNombre() }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="card-footer">
+      <span class="fecha">{{ getFechaFormateada() }}</span>
+      @if (incidente.total_evidencias > 0) {
+        <span class="evidencias">
+          📎 {{ incidente.total_evidencias }}
+        </span>
+      }
+    </div>
+  </div>
+
+  <div class="card-action">
+    <button class="btn-detalle">
+      Ver detalles
+      <svg class="arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+    </button>
+  </div>
+</div>

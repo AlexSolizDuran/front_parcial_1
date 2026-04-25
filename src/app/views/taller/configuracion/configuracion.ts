@@ -8,6 +8,9 @@ import { ModalCrearTaller } from '../../../components/modal-crear-taller/modal-c
 import { Sidebar } from '../../../components/sidebar/sidebar';
 import { TallerUpdate, Especialidad } from '../../../models/taller.model';
 
+// 1. IMPORTAMOS LEAFLET
+import * as L from 'leaflet';
+
 @Component({
   selector: 'app-configuracion',
   standalone: true,
@@ -37,11 +40,15 @@ export class Configuracion implements OnInit {
 
   selectedEspecialidades = signal<number[]>([]);
 
+  // 2. VARIABLES PRIVADAS PARA EL MAPA
+  private map: L.Map | undefined;
+  private marker: L.Marker | undefined;
+
   get showModal() {
     return this.tallerService.showModalTaller;
   }
 
-get taller() {
+  get taller() {
     return this.tallerService.taller;
   }
 
@@ -55,7 +62,7 @@ get taller() {
 
   ngOnInit() {
     this.tallerService.obtenerEspecialidades();
-    
+
     this.tallerService.checkMiTaller().subscribe(() => {
       const t = this.tallerService.taller();
       if (t) {
@@ -64,11 +71,64 @@ get taller() {
         this.horarioTaller.set(t.horario_atencion || '');
         this.latTaller.set(t.ubicacion_lat);
         this.lngTaller.set(t.ubicacion_lng);
-        this.selectedEspecialidades.set(t.especialidades.map(e => e.id));
+        this.selectedEspecialidades.set(t.especialidades.map((e) => e.id));
+
+        // 3. INICIAMOS EL MAPA DESPUÉS DE QUE EL DOM RENDERICE EL TALLER
+        // Usamos setTimeout para darle 100ms a Angular de dibujar el <div id="mapa-taller">
+        setTimeout(() => {
+          this.iniciarMapa();
+        }, 100);
       }
       this.loading.set(false);
     });
   }
+
+  // --- 4. FUNCIÓN CENTRAL DEL MAPA ---
+  private iniciarMapa() {
+    // Si no hay coordenadas (0,0), centramos por defecto en Santa Cruz
+    const lat = this.latTaller() !== 0 ? this.latTaller() : -17.7833;
+    const lng = this.lngTaller() !== 0 ? this.lngTaller() : -63.1821;
+
+    // Inicializar el mapa
+    this.map = L.map('mapa-taller').setView([lat, lng], 14);
+
+    // Cargar la capa visual de OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+    }).addTo(this.map);
+
+    // Configurar icono estándar
+    const icon = L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+    });
+
+    // Añadir el marcador
+    this.marker = L.marker([lat, lng], {
+      icon: icon,
+      draggable: this.editing(), // Solo arrastrable si estamos en modo edición
+    }).addTo(this.map);
+
+    // Evento: Al hacer click en el mapa (solo si editamos)
+    this.map.on('click', (e: any) => {
+      if (!this.editing()) return;
+      const coords = e.latlng;
+      this.marker?.setLatLng(coords);
+      this.latTaller.set(coords.lat);
+      this.lngTaller.set(coords.lng);
+    });
+
+    // Evento: Al terminar de arrastrar el marcador (solo si editamos)
+    this.marker.on('dragend', () => {
+      if (!this.marker) return;
+      const coords = this.marker.getLatLng();
+      this.latTaller.set(coords.lat);
+      this.lngTaller.set(coords.lng);
+    });
+  }
+  // ------------------------------------
 
   isEspecialidadSelected(id: number): boolean {
     return this.selectedEspecialidades().includes(id);
@@ -77,7 +137,7 @@ get taller() {
   toggleEspecialidad(id: number) {
     const current = this.selectedEspecialidades();
     if (current.includes(id)) {
-      this.selectedEspecialidades.set(current.filter(e => e !== id));
+      this.selectedEspecialidades.set(current.filter((e) => e !== id));
     } else {
       this.selectedEspecialidades.set([...current, id]);
     }
@@ -88,14 +148,16 @@ get taller() {
     if (!taller) return;
 
     this.saving.set(true);
-    this.tallerService.actualizarEspecialidadesTaller(taller.id, this.selectedEspecialidades()).subscribe({
-      next: () => {
-        this.saving.set(false);
-      },
-      error: () => {
-        this.saving.set(false);
-      },
-    });
+    this.tallerService
+      .actualizarEspecialidadesTaller(taller.id, this.selectedEspecialidades())
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+        },
+        error: () => {
+          this.saving.set(false);
+        },
+      });
   }
 
   openModalNuevaEspecialidad() {
@@ -112,25 +174,30 @@ get taller() {
     const nombre = this.nuevaEspecialidadNombre().trim();
     if (!nombre) return;
 
-    this.tallerService.crearEspecialidad({
-      nombre: nombre,
-      descripcion: this.nuevaEspecialidadDescripcion() || undefined
-    }).subscribe({
-      next: (esp) => {
-        this.selectedEspecialidades.update(list => [...list, esp.id]);
-        this.closeModalNuevaEspecialidad();
-        this.guardarEspecialidades();
-      },
-      error: () => {
-        alert('Error al crear especialidad');
-      }
-    });
+    this.tallerService
+      .crearEspecialidad({
+        nombre: nombre,
+        descripcion: this.nuevaEspecialidadDescripcion() || undefined,
+      })
+      .subscribe({
+        next: (esp) => {
+          this.selectedEspecialidades.update((list) => [...list, esp.id]);
+          this.closeModalNuevaEspecialidad();
+          this.guardarEspecialidades();
+        },
+        error: () => {
+          alert('Error al crear especialidad');
+        },
+      });
   }
 
+  // 5. AJUSTES AL ENTRAR EN MODO EDICIÓN
   enableEdit() {
     this.editing.set(true);
+    this.marker?.dragging?.enable(); // Habilitar movimiento del pin
   }
 
+  // 6. AJUSTES AL CANCELAR EDICIÓN
   cancelEdit() {
     const t = this.tallerService.taller();
     if (t) {
@@ -139,8 +206,13 @@ get taller() {
       this.horarioTaller.set(t.horario_atencion || '');
       this.latTaller.set(t.ubicacion_lat);
       this.lngTaller.set(t.ubicacion_lng);
+
+      // Devolver el marcador y el mapa a su posición original
+      this.marker?.setLatLng([t.ubicacion_lat, t.ubicacion_lng]);
+      this.map?.setView([t.ubicacion_lat, t.ubicacion_lng], 14);
     }
     this.editing.set(false);
+    this.marker?.dragging?.disable(); // Bloquear movimiento
   }
 
   openModalUbicacion() {
@@ -157,6 +229,7 @@ get taller() {
     this.showModalUbicacion.set(false);
   }
 
+  // 7. ACTUALIZAR MAPA CUANDO SE USA EL GPS
   obtenerUbicacionActual() {
     if (!navigator.geolocation) {
       alert('Tu navegador no soporta geolocalización');
@@ -169,14 +242,20 @@ get taller() {
         const lng = position.coords.longitude;
         this.latTaller.set(lat);
         this.lngTaller.set(lng);
+
+        // Mover el mapa y el marcador a la nueva posición del GPS
+        this.marker?.setLatLng([lat, lng]);
+        this.map?.setView([lat, lng], 14);
+
         this.showModalUbicacion.set(false);
       },
       (error) => {
         alert('No se pudo obtener su ubicación: ' + error.message);
-      }
+      },
     );
   }
 
+  // 8. BLOQUEAR MARCADOR AL GUARDAR
   guardarCambios() {
     const taller = this.tallerService.taller();
     if (!taller) return;
@@ -195,6 +274,7 @@ get taller() {
       next: () => {
         this.saving.set(false);
         this.editing.set(false);
+        this.marker?.dragging?.disable(); // Bloquear movimiento tras guardar
       },
       error: () => {
         this.saving.set(false);

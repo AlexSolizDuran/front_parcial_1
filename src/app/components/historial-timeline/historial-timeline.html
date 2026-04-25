@@ -1,0 +1,27 @@
+<div class="timeline-container">
+  @if (historial.length === 0) {
+    <div class="empty-state">
+      <span class="empty-icon">📋</span>
+      <p>Sin historial</p>
+    </div>
+  } @else {
+    <div class="timeline">
+      @for (item of historial; track item.id; let last = $last) {
+        <div class="timeline-item" [class.last]="last">
+          <div class="timeline-marker">
+            <span class="marker-icon">{{ getIcono(item.titulo) }}</span>
+          </div>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <span class="timeline-titulo">{{ item.titulo }}</span>
+              <span class="timeline-hora">{{ formatDate(item.fecha_hora) }}</span>
+            </div>
+            @if (item.descripcion) {
+              <p class="timeline-descripcion">{{ item.descripcion }}</p>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -121,14 +121,16 @@ export class AuthService {
     );
   }
 
-  logout() {
+  logout(navigate: boolean = true) {
     this._token.set(null);
     this._user.set(null);
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
-    this.router.navigate(['/']);
+    if (navigate) {
+      this.router.navigate(['/login']);
+    }
   }
 
   getToken(): string | null {

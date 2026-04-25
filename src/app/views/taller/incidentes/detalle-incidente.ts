@@ -4,8 +4,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IncidenteService } from '../../../services/incidente.service';
 import { TallerService } from '../../../services/taller.service';
 import { SidebarService } from '../../../services/sidebar.service';
+import { IncidenteTallerService } from '../../../services/incidente-taller.service';
 import { Sidebar } from '../../../components/sidebar/sidebar';
 import { IncidenteCompleto, Evidencia } from '../../../models/incidente.model';
+import { TecnicoInfo } from '../../../models/tecnico.model';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-detalle-incidente',
@@ -30,7 +33,12 @@ import { IncidenteCompleto, Evidencia } from '../../../models/incidente.model';
                   class="text-gray-500 hover:text-gray-700 dark:text-gray-400"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 19l-7-7 7-7"
+                    />
                   </svg>
                 </button>
                 <h1 class="text-base sm:text-xl font-bold text-on-surface dark:text-white">
@@ -65,7 +73,7 @@ import { IncidenteCompleto, Evidencia } from '../../../models/incidente.model';
                   </span>
                 }
               </div>
-              
+
               @if (incidente()!.incidente.especialidad_ia) {
                 <div class="mb-3">
                   <h3 class="text-sm font-medium text-gray-500">Especialidad (IA)</h3>
@@ -86,27 +94,41 @@ import { IncidenteCompleto, Evidencia } from '../../../models/incidente.model';
 
               <div class="text-sm text-gray-500">
                 <p>Fecha de creación: {{ formatoFecha(incidente()!.incidente.fecha_creacion) }}</p>
-                <p>Última actualización: {{ formatoFecha(incidente()!.incidente.fecha_actualizacion) }}</p>
+                <p>
+                  Última actualización:
+                  {{ formatoFecha(incidente()!.incidente.fecha_actualizacion) }}
+                </p>
               </div>
             </div>
 
             <!-- Ubicación -->
             <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-4 sm:p-6">
-              <h3 class="text-lg font-semibold text-on-surface dark:text-white mb-3">
-                Ubicación
-              </h3>
+              <h3 class="text-lg font-semibold text-on-surface dark:text-white mb-3">Ubicación</h3>
               <div class="flex gap-4 text-sm">
                 <div class="flex-1">
                   <p class="text-gray-500">Latitud</p>
-                  <p class="text-on-surface dark:text-white">{{ incidente()!.incidente.ubicacion_lat.toFixed(6) }}</p>
+                  <p class="text-on-surface dark:text-white">
+                    {{ incidente()!.incidente.ubicacion_lat.toFixed(6) }}
+                  </p>
                 </div>
                 <div class="flex-1">
                   <p class="text-gray-500">Longitud</p>
-                  <p class="text-on-surface dark:text-white">{{ incidente()!.incidente.ubicacion_lng.toFixed(6) }}</p>
+                  <p class="text-on-surface dark:text-white">
+                    {{ incidente()!.incidente.ubicacion_lng.toFixed(6) }}
+                  </p>
                 </div>
               </div>
               <a
-                [href]="'https://www.openstreetmap.org/?mlat=' + incidente()!.incidente.ubicacion_lat + '&mlon=' + incidente()!.incidente.ubicacion_lng + '#map=15/' + incidente()!.incidente.ubicacion_lat + '/' + incidente()!.incidente.ubicacion_lng"
+                [href]="
+                  'https://www.openstreetmap.org/?mlat=' +
+                  incidente()!.incidente.ubicacion_lat +
+                  '&mlon=' +
+                  incidente()!.incidente.ubicacion_lng +
+                  '#map=15/' +
+                  incidente()!.incidente.ubicacion_lat +
+                  '/' +
+                  incidente()!.incidente.ubicacion_lng
+                "
                 target="_blank"
                 class="inline-block mt-3 text-blue-600 hover:underline text-sm"
               >
@@ -127,29 +149,56 @@ import { IncidenteCompleto, Evidencia } from '../../../models/incidente.model';
                         <div class="mb-2">
                           <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Foto</span>
                         </div>
-                        <div class="bg-gray-100 dark:bg-gray-800 rounded h-32 flex items-center justify-center">
-                          <span class="text-gray-500 text-sm">Imagen: {{ evidencia.url_archivo }}</span>
+                        <div class="bg-gray-100 dark:bg-gray-800 rounded h-48 flex items-center justify-center overflow-hidden">
+                          @if (evidencia.url_archivo) {
+                            <img 
+                              [src]="evidencia.url_archivo" 
+                              [alt]="evidencia.descripcion || 'Evidencia'"
+                              class="w-full h-full object-cover"
+                              (error)="onImageError($event)"
+                            />
+                          } @else {
+                            <span class="text-gray-500 text-sm">Sin imagen</span>
+                          }
                         </div>
-                      } @else {
+                      } @else if (evidencia.tipo === 'audio') {
                         <div class="mb-2">
                           <span class="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Audio</span>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
                           <svg class="w-8 h-8 text-purple-500" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5z"/>
                             <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                           </svg>
-                          <span class="text-sm text-gray-500">Audio</span>
+                          @if (evidencia.url_archivo) {
+                            <audio [src]="evidencia.url_archivo" controls class="flex-1 h-8"></audio>
+                          } @else {
+                            <span class="text-sm text-gray-500">Sin audio</span>
+                          }
+                        </div>
+                      } @else if (evidencia.tipo === 'texto') {
+                        <div class="mb-2">
+                          <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Texto</span>
+                        </div>
+                        <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
+                          {{ evidencia.contenido || evidencia.descripcion || 'Sin contenido' }}
                         </div>
                       }
-                      
-                      @if (evidencia.transcripcion) {
+
+                      @if (evidencia.descripcion && evidencia.tipo !== 'texto') {
+                        <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 mb-1">Descripción:</p>
+                          <p class="text-xs text-on-surface dark:text-white">{{ evidencia.descripcion }}</p>
+                        </div>
+                      }
+
+                      @if (evidencia.transcripcion && evidencia.tipo !== 'texto') {
                         <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 mb-1">Transcripción:</p>
                           <p class="text-xs text-on-surface dark:text-white">{{ evidencia.transcripcion }}</p>
                         </div>
                       }
-                      
+
                       <p class="text-xs text-gray-500 mt-2">
                         Subido: {{ formatoFecha(evidencia.fecha_subida) }}
                       </p>
@@ -169,10 +218,6 @@ import { IncidenteCompleto, Evidencia } from '../../../models/incidente.model';
                   @for (histo of incidente()!.historial; track histo.id) {
                     <div class="border-l-2 border-blue-500 pl-4">
                       <div class="flex items-center gap-2 mb-1">
-                        <span class="text-xs font-medium px-2 py-0.5 rounded" 
-                              [class]="getEstadoClase(histo.estado)">
-                          {{ histo.estado }}
-                        </span>
                         <span class="text-xs text-gray-500">
                           {{ formatoFecha(histo.fecha_hora) }}
                         </span>
@@ -191,24 +236,74 @@ import { IncidenteCompleto, Evidencia } from '../../../models/incidente.model';
               </div>
             }
 
-            <!-- Acciones -->
-            <div class="flex gap-3">
-              <button
-                (click)="volver()"
-                class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                Volver
-              </button>
-              @if (incidente()!.incidente.estado === 'asignado') {
-                <button
-                  (click)="aceptarIncidente()"
-                  class="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-                >
-                  Aceptar Incidente
-                </button>
+@if (incidente()!.incidente.estado === 'reportado') {
+                <!-- Selector de Técnico -->
+                <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-4">
+                  <h3 class="text-lg font-semibold text-on-surface dark:text-white mb-3">Seleccionar Técnico</h3>
+                  <select 
+                    (change)="onTecnicoSelect($event)"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-on-surface dark:text-white"
+                  >
+                    <option value="">-- Seleccionar técnico --</option>
+                    @for (tecnico of tecnicos(); track tecnico.id) {
+                      <option [value]="tecnico.id">
+                        {{ tecnico.usuario?.nombre || 'Técnico' }} 
+                        @if (!tecnico.disponible) { (No disponible) }
+                      </option>
+                    }
+                  </select>
+                  <button
+                    (click)="aceptarIncidente()"
+                    [disabled]="!tecnicoSeleccionado() || aceptando()"
+                    class="w-full mt-3 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    @if (aceptando()) {
+                      <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                      </svg>
+                      <span>Aceptando...</span>
+                    } @else {
+                      <span>Aceptar y Asignar Técnico</span>
+                    }
+                  </button>
+                </div>
+              } @else if (incidente()!.incidente.estado === 'asignado' || incidente()!.incidente.estado === 'en_camino' || incidente()!.incidente.estado === 'en_sitio') {
+                <!-- Cambiar estado del incidente -->
+                <div class="bg-white dark:bg-[#2e3133] rounded-lg shadow-sm p-4">
+                  <h3 class="text-lg font-semibold text-on-surface dark:text-white mb-3">Actualizar Estado</h3>
+                  <div class="space-y-2">
+                    @if (incidente()!.incidente.estado === 'asignado') {
+                      <button
+                        (click)="cambiarEstado('en_camino')"
+                        [disabled]="actualizando()"
+                        class="w-full px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50"
+                      >
+                        En Camino
+                      </button>
+                    }
+                    @if (incidente()!.incidente.estado === 'en_camino') {
+                      <button
+                        (click)="cambiarEstado('en_sitio')"
+                        [disabled]="actualizando()"
+                        class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                      >
+                        En Sitio
+                      </button>
+                    }
+                    @if (incidente()!.incidente.estado === 'en_sitio') {
+                      <button
+                        (click)="cambiarEstado('finalizado')"
+                        [disabled]="actualizando()"
+                        class="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+                      >
+                        Finalizar
+                      </button>
+                    }
+                  </div>
+                </div>
               }
-            </div>
-          </main>
+            </main>
         } @else {
           <div class="flex items-center justify-center h-48 sm:h-64">
             <p class="text-gray-500">Incidente no encontrado</p>
@@ -222,12 +317,18 @@ export class DetalleIncidente implements OnInit {
   incidenteService = inject(IncidenteService);
   tallerService = inject(TallerService);
   sidebarService = inject(SidebarService);
+  incidenteTallerService = inject(IncidenteTallerService);
   route = inject(ActivatedRoute);
   router = inject(Router);
 
   loading = signal(true);
+  aceptando = signal(false);
+  actualizando = signal(false);
   incidenteId: number = 0;
-  
+  tallerId: number = 0;
+  tecnicos = signal<TecnicoInfo[]>([]);
+  tecnicoSeleccionado = signal<number | null>(null);
+
   get incidente() {
     return this.incidenteService.incidenteActual;
   }
@@ -236,23 +337,114 @@ export class DetalleIncidente implements OnInit {
     return this.sidebarService.collapsed;
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.incidenteId = Number(this.route.snapshot.paramMap.get('id'));
     if (this.incidenteId) {
-      this.cargarIncidente();
+      await this.cargarIncidente();
+      await this.cargarTecnicos();
     } else {
       this.loading.set(false);
     }
   }
 
-  cargarIncidente() {
-    this.incidenteService.obtenerEstadisticas(this.incidenteId).subscribe({
-      next: () => {
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
+  async cargarIncidente() {
+    try {
+      await firstValueFrom(this.incidenteService.obtenerEstadisticas(this.incidenteId));
+    } catch (error) {
+      console.error('Error al cargar incidente:', error);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async cargarTecnicos() {
+    try {
+      const taller = this.tallerService.taller();
+      if (taller) {
+        this.tallerId = taller.id;
+        const tecnicosData = await firstValueFrom(
+          this.incidenteTallerService.obtenerTecnicosDisponibles(this.tallerId)
+        );
+        this.tecnicos.set(tecnicosData || []);
+      } else {
+        await firstValueFrom(this.tallerService.checkMiTaller());
+        const tallerAfter = this.tallerService.taller();
+        if (tallerAfter) {
+          this.tallerId = tallerAfter.id;
+          const tecnicosData = await firstValueFrom(
+            this.incidenteTallerService.obtenerTecnicosDisponibles(this.tallerId)
+          );
+          this.tecnicos.set(tecnicosData || []);
+        }
       }
+    } catch (error) {
+      console.error('Error al cargar técnicos:', error);
+      this.tecnicos.set([]);
+    }
+  }
+
+  onTecnicoSelect(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    const value = select.value;
+    this.tecnicoSeleccionado.set(value ? Number(value) : null);
+  }
+
+  onImageError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+    img.parentElement!.innerHTML = '<span class="text-gray-500 text-sm">Error al cargar imagen</span>';
+  }
+
+  aceptarIncidente() {
+    const tecnicoId = this.tecnicoSeleccionado();
+    
+    // Validación más estricta
+    if (!tecnicoId) {
+      alert('Por favor selecciona un técnico');
+      return;
+    }
+    
+    if (tecnicoId <= 0) {
+      alert('Por favor selecciona un técnico válido');
+      return;
+    }
+    
+    // Verificar que el técnico seleccionado esté en la lista de técnicos disponibles
+    const tecnicoValido = this.tecnicos().some(t => t.id === tecnicoId && t.disponible);
+    if (!tecnicoValido) {
+      alert('Debes seleccionar un técnico disponible');
+      return;
+    }
+
+    this.aceptando.set(true);
+    this.incidenteTallerService.asignarTecnicoIncidente(this.incidenteId, tecnicoId).subscribe({
+      next: (response) => {
+        this.aceptando.set(false);
+        alert('Técnico asignado exitosamente');
+        this.cargarIncidente();
+      },
+      error: (error) => {
+        this.aceptando.set(false);
+        console.error('Error al asignar técnico:', error);
+        alert('Error al asignar técnico: ' + (error.error?.detail || 'Error desconocido'));
+      },
+    });
+  }
+
+  cambiarEstado(nuevoEstado: string) {
+    if (!confirm(`¿Cambiar estado a "${nuevoEstado}"?`)) return;
+    
+    this.actualizando.set(true);
+    this.incidenteTallerService.cambiarEstadoIncidente(this.incidenteId, nuevoEstado).subscribe({
+      next: () => {
+        this.actualizando.set(false);
+        this.cargarIncidente();
+      },
+      error: (err) => {
+        this.actualizando.set(false);
+        console.error('Error al cambiar estado:', err);
+        alert('Error al cambiar estado');
+      },
     });
   }
 
@@ -260,55 +452,50 @@ export class DetalleIncidente implements OnInit {
     this.router.navigate(['/taller/incidentes']);
   }
 
-  aceptarIncidente() {
-    // In a real implementation, this would call the API to accept the incident
-    console.log('Aceptar incidente:', this.incidenteId);
-  }
-
   getEstadoClass(estado: string): string {
     const classes: Record<string, string> = {
-      'reportado': 'bg-yellow-100 text-yellow-800',
-      'asignado': 'bg-blue-100 text-blue-800',
-      'en_camino': 'bg-purple-100 text-purple-800',
-      'en_sitio': 'bg-orange-100 text-orange-800',
-      'finalizado': 'bg-green-100 text-green-800',
-      'cancelado': 'bg-red-100 text-red-800'
+      reportado: 'bg-yellow-100 text-yellow-800',
+      asignado: 'bg-blue-100 text-blue-800',
+      en_camino: 'bg-purple-100 text-purple-800',
+      en_sitio: 'bg-orange-100 text-orange-800',
+      finalizado: 'bg-green-100 text-green-800',
+      cancelado: 'bg-red-100 text-red-800',
     };
     return classes[estado] || 'bg-gray-100 text-gray-800';
   }
 
   getEstadoLabel(estado: string): string {
     const labels: Record<string, string> = {
-      'reportado': 'Reportado',
-      'asignado': 'Asignado',
-      'en_camino': 'En camino',
-      'en_sitio': 'En sitio',
-      'finalizado': 'Finalizado',
-      'cancelado': 'Cancelado'
+      reportado: 'Reportado',
+      asignado: 'Asignado',
+      en_camino: 'En camino',
+      en_sitio: 'En sitio',
+      finalizado: 'Finalizado',
+      cancelado: 'Cancelado',
     };
     return labels[estado] || estado;
   }
 
   getEstadoClase(estado: string): string {
     const classes: Record<string, string> = {
-      'recibido': 'bg-blue-100 text-blue-800',
-      'en_revision': 'bg-yellow-100 text-yellow-800',
-      'asignado': 'bg-purple-100 text-purple-800',
-      'en_atencion': 'bg-orange-100 text-orange-800',
-      'completado': 'bg-green-100 text-green-800',
-      'cancelado': 'bg-red-100 text-red-800'
+      recibido: 'bg-blue-100 text-blue-800',
+      en_revision: 'bg-yellow-100 text-yellow-800',
+      asignado: 'bg-purple-100 text-purple-800',
+      en_atencion: 'bg-orange-100 text-orange-800',
+      completado: 'bg-green-100 text-green-800',
+      cancelado: 'bg-red-100 text-red-800',
     };
     return classes[estado] || 'bg-gray-100 text-gray-800';
   }
 
   getPrioridadClass(prioridad?: string): string {
     if (!prioridad) return 'bg-gray-100 text-gray-800';
-    
+
     const classes: Record<string, string> = {
-      'baja': 'bg-green-100 text-green-800',
-      'media': 'bg-yellow-100 text-yellow-800',
-      'alta': 'bg-orange-100 text-orange-800',
-      'urgente': 'bg-red-100 text-red-800'
+      baja: 'bg-green-100 text-green-800',
+      media: 'bg-yellow-100 text-yellow-800',
+      alta: 'bg-orange-100 text-orange-800',
+      urgente: 'bg-red-100 text-red-800',
     };
     return classes[prioridad] || 'bg-gray-100 text-gray-800';
   }
@@ -316,10 +503,10 @@ export class DetalleIncidente implements OnInit {
   getPrioridadLabel(prioridad?: string): string {
     if (!prioridad) return 'Sin prioridad';
     const labels: Record<string, string> = {
-      'baja': 'Baja',
-      'media': 'Media',
-      'alta': 'Alta',
-      'urgente': 'Urgente'
+      baja: 'Baja',
+      media: 'Media',
+      alta: 'Alta',
+      urgente: 'Urgente',
     };
     return labels[prioridad] || prioridad;
   }
@@ -330,7 +517,7 @@ export class DetalleIncidente implements OnInit {
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 }

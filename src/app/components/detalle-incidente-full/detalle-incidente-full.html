@@ -1,0 +1,114 @@
+<div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" (click)="onCerrar()">
+  <div class="bg-white dark:bg-[#2e3133] rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+    <div class="sticky top-0 bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 rounded-t-xl">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold">Detalles del Incidente #{{ asignacion.incidente.id }}</h2>
+        <button (click)="onCerrar()" class="text-white/80 hover:text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="flex items-center gap-2 mt-2">
+        <span [class]="getColorPrioridad(asignacion.incidente.prioridad)" class="px-2 py-1 rounded-full text-xs font-semibold">
+          {{ getLabelPrioridad(asignacion.incidente.prioridad) }}
+        </span>
+        <span class="text-white/90">{{ asignacion.incidente.especialidad_ia || 'Sin categoría' }}</span>
+      </div>
+    </div>
+
+    <div class="p-4 space-y-6">
+      <div #mapContainer class="w-full h-48 rounded-lg overflow-hidden"></div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-gray-50 dark:bg-[#191c1e] rounded-lg p-3">
+          <h4 class="text-xs text-gray-500 dark:text-gray-400 uppercase mb-1">Cliente</h4>
+          <p class="font-semibold">{{ asignacion.incidente.cliente.nombre }}</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">{{ asignacion.incidente.cliente.telefono || 'Sin teléfono' }}</p>
+        </div>
+        <div class="bg-gray-50 dark:bg-[#191c1e] rounded-lg p-3">
+          <h4 class="text-xs text-gray-500 dark:text-gray-400 uppercase mb-1">Vehículo</h4>
+          <p class="font-semibold">{{ asignacion.incidente.vehiculo?.placa || 'Sin placa' }}</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            {{ asignacion.incidente.vehiculo?.marca || '' }} {{ asignacion.incidente.vehiculo?.modelo || '' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4">
+        <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Análisis de IA</h4>
+        <div class="space-y-2">
+          <div>
+            <span class="text-xs text-blue-600 dark:text-blue-400">Especialidad:</span>
+            <p class="font-medium">{{ asignacion.incidente.especialidad_ia || 'No detectada' }}</p>
+          </div>
+          <div>
+            <span class="text-xs text-blue-600 dark:text-blue-400">Descripción:</span>
+            <p class="text-sm">{{ asignacion.incidente.descripcion_ia || 'Sin descripción' }}</p>
+          </div>
+          <div>
+            <span class="text-xs text-blue-600 dark:text-blue-400">Resumen:</span>
+            <p class="text-sm">{{ asignacion.incidente.descripcion || 'Sin resumen' }}</p>
+          </div>
+        </div>
+      </div>
+
+      @if (getEvidenciasFotos().length > 0) {
+        <div>
+          <h4 class="text-sm font-semibold mb-2">Fotos</h4>
+          <div class="grid grid-cols-3 gap-2">
+            @for (ev of getEvidenciasFotos(); track ev.id) {
+              <a [href]="ev.url_archivo" target="_blank" class="block rounded-lg overflow-hidden">
+                <img [src]="ev.url_archivo" [alt]="ev.descripcion || 'Evidencia'" class="w-full h-24 object-cover hover:opacity-80 transition">
+              </a>
+            }
+          </div>
+        </div>
+      }
+
+      @if (getEvidenciasAudio().length > 0) {
+        <div>
+          <h4 class="text-sm font-semibold mb-2">Audios</h4>
+          @for (ev of getEvidenciasAudio(); track ev.id) {
+            <div class="bg-gray-50 dark:bg-[#191c1e] rounded-lg p-3">
+              <audio controls class="w-full">
+                <source [src]="ev.url_archivo" type="audio/mpeg">
+              </audio>
+              @if (ev.transcripcion) {
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ ev.transcripcion }}</p>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (getEvidenciasTexto().length > 0) {
+        <div>
+          <h4 class="text-sm font-semibold mb-2">Textos</h4>
+          @for (ev of getEvidenciasTexto(); track ev.id) {
+            <div class="bg-gray-50 dark:bg-[#191c1e] rounded-lg p-3">
+              <p class="text-sm">{{ ev.contenido }}</p>
+            </div>
+          }
+        </div>
+      }
+
+      @if (asignacion.incidente.evidencias.length === 0) {
+        <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+          No hay evidencias disponibles
+        </div>
+      }
+    </div>
+
+    <div class="sticky bottom-0 bg-gray-50 dark:bg-[#191c1e] p-4 rounded-b-xl border-t">
+      <div class="flex gap-3">
+        <button (click)="onAceptar()" class="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition">
+          Aceptar Incidente
+        </button>
+        <button (click)="onRechazar()" class="flex-1 bg-red-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-red-700 transition">
+          Rechazar Incidente
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

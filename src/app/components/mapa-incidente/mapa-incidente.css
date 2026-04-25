@@ -1,0 +1,32 @@
+.mapa-container {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.map {
+  width: 100%;
+  height: 250px;
+}
+
+:host ::ng-deep .custom-marker {
+  background: transparent;
+  border: none;
+}
+
+:host ::ng-deep .marker-incidente,
+:host ::ng-deep .marker-tecnico {
+  font-size: 28px;
+  line-height: 28px;
+  text-align: center;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+:host ::ng-deep .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+:host ::ng-deep .leaflet-popup-content {
+  margin: 8px 12px;
+  font-size: 13px;
+}
