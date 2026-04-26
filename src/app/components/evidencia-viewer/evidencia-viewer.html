@@ -9,11 +9,21 @@
       @if (evidenciaActual) {
         <div class="main-content">
           @if (isFoto(evidenciaActual)) {
+            @if (imagenError) {
+              <div class="image-error">
+                <span class="error-icon">⚠️</span>
+                <p>Error al cargar la imagen</p>
+                <p class="error-url">{{ getFullUrl(evidenciaActual?.url_archivo) }}</p>
+              </div>
+            }
             <img 
               [src]="getFullUrl(evidenciaActual.url_archivo)" 
               alt="Evidencia"
               class="main-image"
               (click)="onVerAmpliado(evidenciaActual)"
+              (load)="onImageLoad()"
+              (error)="onImageError($event)"
+              [style.display]="imagenError ? 'none' : 'block'"
             />
           } @else if (isAudio(evidenciaActual)) {
             <div class="audio-player">

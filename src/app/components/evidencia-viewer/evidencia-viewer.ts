@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Evidencia } from '../../models/incidente-asignado.model';
 import { environment } from '../../../environments/environment';
@@ -10,22 +10,36 @@ import { environment } from '../../../environments/environment';
   templateUrl: './evidencia-viewer.html',
   styleUrl: './evidencia-viewer.css',
 })
-export class EvidenciaViewerComponent {
+export class EvidenciaViewerComponent implements OnInit {
   @Input() evidencias: Evidencia[] = [];
   @Output() verAmpliado = new EventEmitter<Evidencia>();
 
   private apiUrl = environment.apiUrl;
   selectedIndex = 0;
+  imagenError = false;
+
+  ngOnInit() {
+    console.log('Evidencias recibidas:', this.evidencias);
+    if (this.evidencias.length > 0) {
+      console.log('Primera evidencia:', this.evidencias[0]);
+      console.log('URL de archivo:', this.evidencias[0].url_archivo);
+    }
+  }
 
   get evidenciaActual(): Evidencia | null {
     return this.evidencias[this.selectedIndex] || null;
   }
 
   getFullUrl(url: string | null | undefined): string {
-    if (!url) return '';
+    if (!url) {
+      console.warn('URL de archivo vacía o nula');
+      return '';
+    }
     if (url.startsWith('http://') || url.startsWith('https://')) {
+      console.log('URL completa (Cloudinary):', url);
       return url;
     }
+    console.log('URL relativa, agregando apiUrl:', this.apiUrl, url);
     return `${this.apiUrl}${url}`;
   }
 
@@ -56,6 +70,15 @@ export class EvidenciaViewerComponent {
 
   onVerAmpliado(evidencia: Evidencia) {
     this.verAmpliado.emit(evidencia);
+  }
+
+  onImageError(event: Event) {
+    console.error('Error cargando imagen:', this.evidenciaActual?.url_archivo);
+    this.imagenError = true;
+  }
+
+  onImageLoad() {
+    this.imagenError = false;
   }
 
   playAudio(evidencia: Evidencia) {

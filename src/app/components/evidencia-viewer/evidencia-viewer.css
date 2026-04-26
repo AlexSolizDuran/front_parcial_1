@@ -110,6 +110,36 @@
   font-size: 24px;
 }
 
+.image-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: var(--bg-tertiary, #f3f4f6);
+  border-radius: 8px;
+  color: var(--text-muted, #9ca3af);
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.image-error p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.error-url {
+  font-size: 11px !important;
+  word-break: break-all;
+  color: var(--text-secondary, #6b7280);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 :host-context(.dark) {
   --bg-secondary: #1f2937;
   --bg-tertiary: #374151;

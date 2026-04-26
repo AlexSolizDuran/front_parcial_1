@@ -73,8 +73,21 @@ export class DetalleIncidenteModalComponent implements OnDestroy {
       );
       console.log('Respuesta exitosa del backend:', data);
       this.detalle = data;
-    } catch (error) {
+      
+      // Log de evidencias para debug
+      if (data && data.evidencias) {
+        console.log('Evidencias recibidas:', data.evidencias.length);
+        data.evidencias.forEach((ev: any, idx: number) => {
+          console.log(`Evidencia ${idx}:`, ev.tipo, ev.url_archivo);
+        });
+      } else {
+        console.warn('No se recibieron evidencias en la respuesta');
+      }
+    } catch (error: any) {
       console.error('Error al cargar detalle:', error);
+      if (error.status === 0) {
+        console.error('Error de conexión - ¿Está el backend corriendo en http://localhost:8000?');
+      }
     } finally {
       console.log('Finalizando carga, setting loading=false');
       this.loading.set(false);
