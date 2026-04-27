@@ -1,7 +1,7 @@
 {
   "framework": "angular",
   "buildCommand": "ng build --configuration production",
-  "outputDirectory": "dist/front",
+  "outputDirectory": "dist/front/browser",
   "devCommand": "ng serve",
   "installCommand": "npm install",
   "rewrites": [
