@@ -8,12 +8,16 @@ import { IncidenteService } from '../../../services/incidente.service';
 import { TecnicoService } from '../../../services/tecnico.service';
 import { WebSocketService, WebSocketNotification } from '../../../services/websocket.service';
 import { NotificacionService, Notificacion } from '../../../services/notificacion.service';
-import { IncidenteTallerService, AsignacionPendiente } from '../../../services/incidente-taller.service';
+import {
+  IncidenteTallerService,
+  AsignacionPendiente,
+} from '../../../services/incidente-taller.service';
 import { ModalCrearTaller } from '../../../components/modal-crear-taller/modal-crear-taller';
 import { Sidebar } from '../../../components/sidebar/sidebar';
 import { DetalleIncidenteModalComponent } from '../../../components/detalle-incidente-modal/detalle-incidente-modal';
 import { IncidentePendienteCardComponent } from '../../../components/incidente-pendiente-card/incidente-pendiente-card';
 import { DetalleIncidenteFullComponent } from '../../../components/detalle-incidente-full/detalle-incidente-full';
+import { ModalSeleccionarTecnicoComponent } from '../../../components/modal-seleccionar-tecnico/modal-seleccionar-tecnico';
 import { Incidente } from '../../../models/incidente.model';
 import { Tecnico } from '../../../models/tecnico.model';
 import { HistorialTaller } from '../../../models/historial-taller.model';
@@ -31,7 +35,15 @@ interface Estadisticas {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ModalCrearTaller, Sidebar, DetalleIncidenteModalComponent, IncidentePendienteCardComponent, DetalleIncidenteFullComponent],
+  imports: [
+    CommonModule,
+    ModalCrearTaller,
+    Sidebar,
+    DetalleIncidenteModalComponent,
+    IncidentePendienteCardComponent,
+    DetalleIncidenteFullComponent,
+    ModalSeleccionarTecnicoComponent,
+  ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
@@ -65,17 +77,20 @@ export class Dashboard implements OnInit, OnDestroy {
   isWsConnected = this.wsService.isConnected;
   newNotificationCount = this.wsService.newNotificationCount;
 
-incidentesDelDia = signal<IncidentesDelDia>({
+  incidentesDelDia = signal<IncidentesDelDia>({
     total_hoy: 0,
     activos: 0,
     finalizados: 0,
-    incidentes: []
+    incidentes: [],
   });
   incidenteSeleccionado = signal<IncidenteAsignado | null>(null);
   showDetalleModal = signal(false);
 
   asignacionPendiente = signal<AsignacionPendiente | null>(null);
   showDetallePendienteModal = signal(false);
+
+  showSeleccionarTecnicoModal = signal(false);
+  incidenteParaAsignar = signal<AsignacionPendiente | null>(null);
 
   loading = signal(true);
   showNotificationPanel = signal(false);
@@ -86,33 +101,24 @@ incidentesDelDia = signal<IncidentesDelDia>({
   private tecnicosTimer: any;
   private mapaListo = false;
 
-   ngOnInit() {
-    // Cargar taller y luego todos los datos
+  ngOnInit() {
     this.tallerService.checkMiTaller().subscribe({
-      next: (taller) => {
-        console.log('[DEBUG] Dashboard - Taller cargado:', taller);
+      next: () => {
         this.loading.set(false);
-        
-        if (taller?.id) {
-          // Conectar WebSocket inmediatamente
-          this.wsService.connect(taller.id);
-          
-          // Cargar TODOS los datos del dashboard después de confirmar taller
-          // Pasamos el taller directamente para evitar problemas de timing
-          this.cargarDatos(taller);
-          this.cargarAsignacionPendiente();
-          this.cargarTecnicos();
-        }
-        
-        // Iniciar mapa después de un breve delay
+
+        // ¡MOVER AQUÍ!
+        // Solo cargamos los datos cuando ya sabemos el ID del taller y la señal tiene datos
+        this.cargarDatos();
+        this.cargarAsignacionPendiente();
+        this.cargarTecnicos(); // Es buena idea cargar los técnicos aquí también la primera vez
+
         setTimeout(() => {
           this.iniciarMapa();
         }, 100);
       },
-      error: (err) => {
-        console.error('[DEBUG] Dashboard - Error taller:', err);
+      error: () => {
         this.loading.set(false);
-      }
+      },
     });
 
     // Timer para recargar técnicos cada 30 segundos
@@ -120,18 +126,45 @@ incidentesDelDia = signal<IncidentesDelDia>({
       this.cargarTecnicos();
     }, 30000);
 
-    // Suscribirse al WebSocket para recibir notificaciones en tiempo real
-    this.wsService.notification$.subscribe(notification => {
+    // Escuchar notificaciones del WebSocket
+    // Escuchar notificaciones del WebSocket
+    // Escuchar notificaciones del WebSocket
+    this.wsService.notification$.subscribe((notification) => {
       if (notification) {
+        console.log('🔔 [WebSocket] Notificación recibida en Dashboard:', notification);
         this.cargarHistorialTaller();
-        if (notification.type === 'nuevo_incidente' || 
-            notification.type === 'incidente_asignado' || 
-            notification.type === 'incidente_aceptado' ||
-            notification.type === 'tecnico_en_camino' ||
-            notification.type === 'tecnico_en_sitio' ||
-            notification.type === 'tecnico_termino') {
-          this.cargarAsignacionPendiente();
-          this.cargarDatos();
+
+        // 1. CASO: NUEVO INCIDENTE -> Solo recargamos la tarjeta de arriba
+        if (
+          notification.type === 'nuevo_incidente' ||
+          notification.tipo === 'incidente_llegada' ||
+          notification.type === 'nuevo_incidente_asignado' ||
+          notification.type === 'asignacion_incidente'
+        ) {
+          console.log('🔄 Detectado nuevo incidente. Recargando tarjeta automáticamente...');
+          setTimeout(() => {
+            this.cargarAsignacionPendiente();
+          }, 500);
+        }
+
+        // 2. CASO: CAMBIO DE ESTADO -> Recargamos la lista, el mapa y las estadísticas
+        const eventosDeEstado = [
+          'tecnico_en_camino',
+          'tecnico_en_sitio',
+          'incidente_finalizado',
+          'tecnico_termino',
+          'incidente_aceptado',
+          'cambio_estado',
+        ];
+
+        if (eventosDeEstado.includes(notification.type)) {
+          console.log(
+            `🔄 Detectado evento de estado (${notification.type}). Actualizando dashboard...`,
+          );
+          // Esperamos medio segundo para dar tiempo a que la base de datos guarde el nuevo estado
+          setTimeout(() => {
+            this.cargarDatos();
+          }, 500);
         }
       }
     });
@@ -151,23 +184,54 @@ incidentesDelDia = signal<IncidentesDelDia>({
 
     this.incidenteTallerService.obtenerAsignacionPendiente(taller.id).subscribe({
       next: (asignacion) => {
-        this.asignacionPendiente.set(asignacion);
+        console.log('✅ Datos de asignación consultados:', asignacion);
+
+        // Si el backend devuelve un objeto válido con id, lo seteamos
+        if (asignacion && asignacion.asignacion && asignacion.asignacion.id) {
+          this.asignacionPendiente.set(asignacion);
+        } else {
+          // Si devuelve vacío, limpiamos la tarjeta
+          this.asignacionPendiente.set(null);
+        }
       },
-      error: () => {}
+      error: (err) => {
+        console.log('⚠️ No hay asignaciones pendientes o error:', err.status);
+        this.asignacionPendiente.set(null);
+      },
     });
   }
 
   onAceptarIncidente(asignacionId: number) {
-    this.incidenteTallerService.aceptarAsignacion(asignacionId).subscribe({
-      next: () => {
-        this.asignacionPendiente.set(null);
-        this.showDetallePendienteModal.set(false);
-        this.cargarDatos();
-      },
-      error: (err) => {
-        console.error('Error al aceptar:', err);
-      }
-    });
+    const asignacion = this.asignacionPendiente();
+    if (asignacion && asignacion.asignacion.id === asignacionId) {
+      this.incidenteParaAsignar.set(asignacion);
+    }
+    this.showSeleccionarTecnicoModal.set(true);
+  }
+
+  onTecnicoSeleccionado(tecnicoId: number) {
+    const asignacion = this.incidenteParaAsignar();
+    if (!asignacion) return;
+
+    this.incidenteTallerService
+      .asignarTecnicoIncidente(asignacion.incidente.id, tecnicoId)
+      .subscribe({
+        next: () => {
+          this.showSeleccionarTecnicoModal.set(false);
+          this.incidenteParaAsignar.set(null);
+          this.asignacionPendiente.set(null);
+          this.showDetallePendienteModal.set(false);
+          this.cargarDatos();
+        },
+        error: (err) => {
+          console.error('Error al aceptar y asignar:', err);
+        },
+      });
+  }
+
+  onCerrarSeleccionarTecnico() {
+    this.showSeleccionarTecnicoModal.set(false);
+    this.incidenteParaAsignar.set(null);
   }
 
   onRechazarIncidente(asignacionId: number) {
@@ -179,7 +243,7 @@ incidentesDelDia = signal<IncidentesDelDia>({
       },
       error: (err) => {
         console.error('Error al rechazar:', err);
-      }
+      },
     });
   }
 
@@ -258,11 +322,11 @@ incidentesDelDia = signal<IncidentesDelDia>({
             total_hoy: data.total_hoy || 0,
             activos: data.activos || 0,
             finalizados: data.finalizados || 0,
-            incidentes: data.incidentes || []
+            incidentes: data.incidentes || [],
           });
         }
       },
-      error: () => {}
+      error: () => {},
     });
   }
 
@@ -287,7 +351,7 @@ incidentesDelDia = signal<IncidentesDelDia>({
         const icono = this.getIconoIncidente(inc.estado);
         const color = this.getColorIncidente(inc.estado);
         const estadoLabel = this.getEstadoLabel(inc.estado);
-        
+
         const iconIncidente = L.divIcon({
           html: `<div style="font-size: 22px; line-height: 22px; text-align: center;">${icono}</div>`,
           className: 'custom-icon-incidente',
@@ -297,12 +361,14 @@ incidentesDelDia = signal<IncidentesDelDia>({
         });
 
         const marker = L.marker([inc.ubicacion_lat, inc.ubicacion_lng], { icon: iconIncidente })
-          .bindPopup(`
+          .bindPopup(
+            `
             <b>🚨 Incidente #${inc.id}</b><br>
             <span style="color: ${color};">● ${estadoLabel}</span><br>
             ${inc.especialidad_ia || 'General'}<br>
             ${inc.descripcion_ia || inc.descripcion_original || ''}
-          `)
+          `,
+          )
           .addTo(this.map!);
         this.markerIncidentes.push(marker);
       }
@@ -325,65 +391,72 @@ incidentesDelDia = signal<IncidentesDelDia>({
     });
   }
 
-    private cargarDatos(tallerParam?: any) {
-      // Usar el parámetro si se proporciona, sino leer del signal
-      const taller = tallerParam || this.tallerService.taller();
-      
-      this.notificacionService.obtenerMisNotificaciones().subscribe();
+  private cargarDatos() {
+    const taller = this.tallerService.taller();
 
-      if (taller?.id) {
-        this.incidenteTallerService.obtenerEstadisticas(taller.id).subscribe({
-          next: (stats) => {
-            this.estadisticas.set({
-              total_solicitudes: stats.total,
-              solicitudes_pendientes: stats.pendientes,
-              solicitudes_completadas: stats.completadas,
-              tecnicos_activos: this.estadisticas().tecnicos_activos,
-            });
-          },
-          error: () => {}
-        });
+    // Si no hay taller, detenemos la ejecución para evitar errores
+    if (!taller?.id) return;
 
-        this.incidenteService.obtenerIncidentesTaller(taller.id).subscribe({
-          next: (incidentesTaller) => {
-            this.incidentesDashboard.set(incidentesTaller);
-            this.actualizarMarcadores();
-          },
-          error: () => {}
-        });
+    this.notificacionService.obtenerMisNotificaciones().subscribe();
 
-        this.incidenteTallerService.obtenerIncidentesAsignados(taller.id).subscribe({
-          next: (resp) => {
-            if (resp && typeof resp === 'object' && 'incidentes' in resp) {
-              const data = resp as any;
-              this.incidentesDelDia.set({
-                total_hoy: data.total_hoy || 0,
-                activos: data.activos || 0,
-                finalizados: data.finalizados || 0,
-                incidentes: data.incidentes || []
-              });
-            }
-          },
-          error: () => {}
-        });
+    // 1. CARGAR ESTADÍSTICAS REALES DESDE EL BACKEND
+    this.incidenteTallerService.obtenerEstadisticas(taller.id).subscribe({
+      next: (stats) => {
+        this.estadisticas.update((e) => ({
+          ...e,
+          total_solicitudes: stats.total,
+          solicitudes_pendientes: stats.pendientes,
+          solicitudes_completadas: stats.completadas,
+        }));
+      },
+      error: (err) => {
+        console.error('Error al cargar estadísticas', err);
+        this.loading.set(false);
+      },
+    });
 
-        this.tecnicoService.getTecnicos().subscribe({
-          next: (tecnicos) => {
-            this.tecnicosDashboard.set(tecnicos);
-            this.estadisticas.update((e) => ({
-              ...e,
-              tecnicos_activos: tecnicos.filter((t) => t.disponible).length,
-            }));
-            this.actualizarMarcadores();
-          },
-          error: () => {},
-        });
-      }
+    // 2. CARGAR INCIDENTES DEL TALLER (Para los marcadores del mapa)
+    this.incidenteService.obtenerIncidentesTaller(taller.id).subscribe({
+      next: (incidentesTaller) => {
+        this.incidentesDashboard.set(incidentesTaller);
+        if (this.mapaListo) {
+          this.actualizarMarcadores();
+        }
+      },
+      error: () => {},
+    });
 
-      this.wsService.notification$.subscribe(() => {
-        this.cargarHistorialTaller();
-      });
-    }
+    // 3. CARGAR INCIDENTES ASIGNADOS (Para la lista "Incidentes del Día")
+    this.incidenteTallerService.obtenerIncidentesAsignados(taller.id).subscribe({
+      next: (resp) => {
+        if (resp && typeof resp === 'object' && 'incidentes' in resp) {
+          const data = resp as any;
+          this.incidentesDelDia.set({
+            total_hoy: data.total_hoy || 0,
+            activos: data.activos || 0,
+            finalizados: data.finalizados || 0,
+            incidentes: data.incidentes || [],
+          });
+        }
+      },
+      error: () => {},
+    });
+
+    // 4. CARGAR TÉCNICOS (Para marcadores y contador de técnicos activos)
+    this.tecnicoService.getTecnicos().subscribe({
+      next: (tecnicos) => {
+        this.tecnicosDashboard.set(tecnicos);
+        this.estadisticas.update((e) => ({
+          ...e,
+          tecnicos_activos: tecnicos.filter((t) => t.disponible).length,
+        }));
+        if (this.mapaListo) {
+          this.actualizarMarcadores();
+        }
+      },
+      error: () => {},
+    });
+  }
 
   private cargarHistorialTaller() {
     const taller = this.tallerService.taller();
@@ -392,7 +465,7 @@ incidentesDelDia = signal<IncidentesDelDia>({
         next: (historial) => {
           this.historialTaller.set(historial);
         },
-        error: () => {}
+        error: () => {},
       });
     }
   }
@@ -410,7 +483,7 @@ incidentesDelDia = signal<IncidentesDelDia>({
   }
 
   toggleNotificationPanel() {
-    this.showNotificationPanel.update(v => !v);
+    this.showNotificationPanel.update((v) => !v);
     if (this.showNotificationPanel()) {
       this.wsService.markAsRead();
       this.cargarHistorialTaller();
@@ -419,33 +492,33 @@ incidentesDelDia = signal<IncidentesDelDia>({
 
   getNotificacionIcon(tipo: string): string {
     const iconos: Record<string, string> = {
-      'incidente_llegada': '🔔',
-      'incidente_aceptado': '✅',
-      'incidente_rechazado': '❌',
-      'tecnico_termino': '🔧',
-      'info': 'ℹ️'
+      incidente_llegada: '🔔',
+      incidente_aceptado: '✅',
+      incidente_rechazado: '❌',
+      tecnico_termino: '🔧',
+      info: 'ℹ️',
     };
     return iconos[tipo] || '📢';
   }
 
   getNotificacionColor(tipo: string): string {
     const colores: Record<string, string> = {
-      'incidente_llegada': 'bg-blue-100 text-blue-800 border-blue-200',
-      'incidente_aceptado': 'bg-green-100 text-green-800 border-green-200',
-      'incidente_rechazado': 'bg-red-100 text-red-800 border-red-200',
-      'tecnico_termino': 'bg-purple-100 text-purple-800 border-purple-200',
-      'info': 'bg-gray-100 text-gray-800 border-gray-200'
+      incidente_llegada: 'bg-blue-100 text-blue-800 border-blue-200',
+      incidente_aceptado: 'bg-green-100 text-green-800 border-green-200',
+      incidente_rechazado: 'bg-red-100 text-red-800 border-red-200',
+      tecnico_termino: 'bg-purple-100 text-purple-800 border-purple-200',
+      info: 'bg-gray-100 text-gray-800 border-gray-200',
     };
     return colores[tipo] || 'bg-gray-100 text-gray-800 border-gray-200';
   }
 
   getNotificacionLabel(tipo: string): string {
     const labels: Record<string, string> = {
-      'incidente_llegada': 'Nuevo',
-      'incidente_aceptado': 'Asignado',
-      'incidente_rechazado': 'Rechazado',
-      'tecnico_termino': 'Completado',
-      'info': 'Info'
+      incidente_llegada: 'Nuevo',
+      incidente_aceptado: 'Asignado',
+      incidente_rechazado: 'Rechazado',
+      tecnico_termino: 'Completado',
+      info: 'Info',
     };
     return labels[tipo] || 'Notificación';
   }
@@ -493,8 +566,8 @@ incidentesDelDia = signal<IncidentesDelDia>({
       return;
     }
 
-    this.markerIncidentes.forEach(m => m.remove());
-    this.markerTecnicos.forEach(m => m.remove());
+    this.markerIncidentes.forEach((m) => m.remove());
+    this.markerTecnicos.forEach((m) => m.remove());
     this.markerIncidentes = [];
     this.markerTecnicos = [];
 
@@ -502,7 +575,7 @@ incidentesDelDia = signal<IncidentesDelDia>({
       if (inc.ubicacion_lat && inc.ubicacion_lng) {
         const color = this.getColorIncidente(inc.estado);
         const icono = this.getIconoIncidente(inc.estado);
-        
+
         const iconIncidente = L.divIcon({
           html: `<div style="font-size: 22px; line-height: 22px; text-align: center;">${icono}</div>`,
           className: 'custom-icon-incidente',
@@ -513,12 +586,14 @@ incidentesDelDia = signal<IncidentesDelDia>({
 
         const estadoLabel = this.getEstadoLabel(inc.estado);
         const marker = L.marker([inc.ubicacion_lat, inc.ubicacion_lng], { icon: iconIncidente })
-          .bindPopup(`
+          .bindPopup(
+            `
             <b>🚨 Incidente #${inc.id}</b><br>
             <span style="color: ${color};">● ${estadoLabel}</span><br>
             ${inc.especialidad_ia || 'General'}<br>
             ${inc.descripcion_ia || inc.descripcion_original || ''}
-          `)
+          `,
+          )
           .addTo(this.map!);
         this.markerIncidentes.push(marker);
       }
@@ -527,7 +602,9 @@ incidentesDelDia = signal<IncidentesDelDia>({
     const taller = this.tallerService.taller();
     console.log('Técnicos cargados:', this.tecnicosDashboard());
     this.tecnicosDashboard().forEach((tec) => {
-      console.log(`Técnico ${tec.id}: disponible=${tec.disponible}, lat=${tec.ubicacion_lat}, lng=${tec.ubicacion_lng}`);
+      console.log(
+        `Técnico ${tec.id}: disponible=${tec.disponible}, lat=${tec.ubicacion_lat}, lng=${tec.ubicacion_lng}`,
+      );
       if (tec.disponible && tec.ubicacion_lat && tec.ubicacion_lng) {
         const iconTecnico = L.divIcon({
           html: '<div style="font-size: 24px; line-height: 24px; text-align: center;">🔧</div>',
@@ -546,31 +623,43 @@ incidentesDelDia = signal<IncidentesDelDia>({
 
   getColorIncidente(estado: string): string {
     switch (estado) {
-      case 'reportado': return '#F59E0B';
-      case 'asignado': return '#3B82F6';
-      case 'en_camino': return '#F97316';
-      case 'en_sitio': return '#22C55E';
-      case 'finalizado': return '#6B7280';
-      case 'cancelado': return '#EF4444';
-      default: return '#6B7280';
+      case 'reportado':
+        return '#F59E0B';
+      case 'asignado':
+        return '#3B82F6';
+      case 'en_camino':
+        return '#F97316';
+      case 'en_sitio':
+        return '#22C55E';
+      case 'finalizado':
+        return '#6B7280';
+      case 'cancelado':
+        return '#EF4444';
+      default:
+        return '#6B7280';
     }
   }
 
   getIconoIncidente(estado: string): string {
     switch (estado) {
-      case 'reportado': return '🟡';
-      case 'asignado': return '🔵';
-      case 'en_camino': return '🟠';
-      case 'en_sitio': return '🟢';
-      case 'finalizado': return '⚪';
-      case 'cancelado': return '🔴';
-      default: return '⚪';
+      case 'reportado':
+        return '🟡';
+      case 'asignado':
+        return '🔵';
+      case 'en_camino':
+        return '🟠';
+      case 'en_sitio':
+        return '🟢';
+      case 'finalizado':
+        return '⚪';
+      case 'cancelado':
+        return '🔴';
+      default:
+        return '⚪';
     }
   }
 
-  private mapEstadoIncidente(
-    estado: string
-  ): 'pendiente' | 'en_proceso' | 'completado' {
+  private mapEstadoIncidente(estado: string): 'pendiente' | 'en_proceso' | 'completado' {
     switch (estado) {
       case 'reportado':
       case 'asignado':
@@ -651,11 +740,11 @@ incidentesDelDia = signal<IncidentesDelDia>({
               total_hoy: data.total_hoy || 0,
               activos: data.activos || 0,
               finalizados: data.finalizados || 0,
-              incidentes: data.incidentes || []
+              incidentes: data.incidentes || [],
             });
           }
         },
-        error: () => {}
+        error: () => {},
       });
     }
   }

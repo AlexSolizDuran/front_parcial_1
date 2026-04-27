@@ -112,6 +112,12 @@ export class IncidenteService {
     );
   }
 
+  obtenerIncidentesDisponibles(tallerId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/cercanos/${tallerId}`, {
+      headers: this.getHeaders()
+    });
+  }
+
   // Methods for incident state management
   aceptarIncidente(asignacionId: number): Observable<any> {
     return this.http.put(

@@ -120,6 +120,21 @@ export class IncidenteTallerService {
     );
   }
 
+  obtenerIncidentesDisponibles(tallerId: number): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${this.apiUrl}/cercanos/${tallerId}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  aceptarIncidente(incidenteId: number): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/${incidenteId}/asignar`,
+      {},
+      { headers: this.getHeaders() }
+    );
+  }
+
   obtenerDetalleIncidente(incidenteId: number): Observable<DetalleIncidente> {
     const url = `${this.apiUrl}/${incidenteId}/detalle-asignado`;
     console.log('Llamando a API:', url);
