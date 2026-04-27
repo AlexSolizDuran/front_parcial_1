@@ -63,6 +63,12 @@ export interface AsignacionPendiente {
   tiempo_restante_segundos: number;
 }
 
+export interface EstadisticasTaller {
+  total: number;
+  pendientes: number;
+  completadas: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -75,6 +81,13 @@ export class IncidenteTallerService {
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`
     });
+  }
+
+  obtenerEstadisticas(tallerId: number): Observable<EstadisticasTaller> {
+    return this.http.get<EstadisticasTaller>(
+      `${this.apiUrl}/taller/${tallerId}/estadisticas`,
+      { headers: this.getHeaders() }
+    );
   }
 
   obtenerAsignacionPendiente(tallerId: number): Observable<AsignacionPendiente | null> {

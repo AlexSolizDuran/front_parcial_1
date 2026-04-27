@@ -14,7 +14,6 @@ import { Sidebar } from '../../../components/sidebar/sidebar';
 import { DetalleIncidenteModalComponent } from '../../../components/detalle-incidente-modal/detalle-incidente-modal';
 import { IncidentePendienteCardComponent } from '../../../components/incidente-pendiente-card/incidente-pendiente-card';
 import { DetalleIncidenteFullComponent } from '../../../components/detalle-incidente-full/detalle-incidente-full';
-import { ModalSeleccionarTecnicoComponent } from '../../../components/modal-seleccionar-tecnico/modal-seleccionar-tecnico';
 import { Incidente } from '../../../models/incidente.model';
 import { Tecnico } from '../../../models/tecnico.model';
 import { HistorialTaller } from '../../../models/historial-taller.model';
@@ -32,7 +31,7 @@ interface Estadisticas {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ModalCrearTaller, Sidebar, DetalleIncidenteModalComponent, IncidentePendienteCardComponent, DetalleIncidenteFullComponent, ModalSeleccionarTecnicoComponent],
+  imports: [CommonModule, ModalCrearTaller, Sidebar, DetalleIncidenteModalComponent, IncidentePendienteCardComponent, DetalleIncidenteFullComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
@@ -78,9 +77,6 @@ incidentesDelDia = signal<IncidentesDelDia>({
   asignacionPendiente = signal<AsignacionPendiente | null>(null);
   showDetallePendienteModal = signal(false);
 
-  showSeleccionarTecnicoModal = signal(false);
-  incidenteParaAsignar = signal<AsignacionPendiente | null>(null);
-
   loading = signal(true);
   showNotificationPanel = signal(false);
 
@@ -90,31 +86,52 @@ incidentesDelDia = signal<IncidentesDelDia>({
   private tecnicosTimer: any;
   private mapaListo = false;
 
-  ngOnInit() {
+   ngOnInit() {
+    // Cargar taller y luego todos los datos
     this.tallerService.checkMiTaller().subscribe({
-      next: () => {
+      next: (taller) => {
+        console.log('[DEBUG] Dashboard - Taller cargado:', taller);
         this.loading.set(false);
+        
+        if (taller?.id) {
+          // Conectar WebSocket inmediatamente
+          this.wsService.connect(taller.id);
+          
+          // Cargar TODOS los datos del dashboard después de confirmar taller
+          // Pasamos el taller directamente para evitar problemas de timing
+          this.cargarDatos(taller);
+          this.cargarAsignacionPendiente();
+          this.cargarTecnicos();
+        }
+        
+        // Iniciar mapa después de un breve delay
         setTimeout(() => {
           this.iniciarMapa();
         }, 100);
       },
-      error: () => {
+      error: (err) => {
+        console.error('[DEBUG] Dashboard - Error taller:', err);
         this.loading.set(false);
       }
     });
 
-    this.cargarDatos();
-    this.cargarAsignacionPendiente();
-
+    // Timer para recargar técnicos cada 30 segundos
     this.tecnicosTimer = setInterval(() => {
       this.cargarTecnicos();
     }, 30000);
 
+    // Suscribirse al WebSocket para recibir notificaciones en tiempo real
     this.wsService.notification$.subscribe(notification => {
       if (notification) {
         this.cargarHistorialTaller();
-        if (notification.type === 'nuevo_incidente') {
+        if (notification.type === 'nuevo_incidente' || 
+            notification.type === 'incidente_asignado' || 
+            notification.type === 'incidente_aceptado' ||
+            notification.type === 'tecnico_en_camino' ||
+            notification.type === 'tecnico_en_sitio' ||
+            notification.type === 'tecnico_termino') {
           this.cargarAsignacionPendiente();
+          this.cargarDatos();
         }
       }
     });
@@ -141,34 +158,16 @@ incidentesDelDia = signal<IncidentesDelDia>({
   }
 
   onAceptarIncidente(asignacionId: number) {
-    const asignacion = this.asignacionPendiente();
-    if (asignacion && asignacion.asignacion.id === asignacionId) {
-      this.incidenteParaAsignar.set(asignacion);
-    }
-    this.showSeleccionarTecnicoModal.set(true);
-  }
-
-  onTecnicoSeleccionado(tecnicoId: number) {
-    const asignacion = this.incidenteParaAsignar();
-    if (!asignacion) return;
-
-    this.incidenteTallerService.asignarTecnicoIncidente(asignacion.incidente.id, tecnicoId).subscribe({
+    this.incidenteTallerService.aceptarAsignacion(asignacionId).subscribe({
       next: () => {
-        this.showSeleccionarTecnicoModal.set(false);
-        this.incidenteParaAsignar.set(null);
         this.asignacionPendiente.set(null);
         this.showDetallePendienteModal.set(false);
         this.cargarDatos();
       },
       error: (err) => {
-        console.error('Error al aceptar y asignar:', err);
+        console.error('Error al aceptar:', err);
       }
     });
-  }
-
-  onCerrarSeleccionarTecnico() {
-    this.showSeleccionarTecnicoModal.set(false);
-    this.incidenteParaAsignar.set(null);
   }
 
   onRechazarIncidente(asignacionId: number) {
@@ -326,79 +325,65 @@ incidentesDelDia = signal<IncidentesDelDia>({
     });
   }
 
-  private cargarDatos() {
-    const taller = this.tallerService.taller();
-    
-    this.notificacionService.obtenerMisNotificaciones().subscribe();
+    private cargarDatos(tallerParam?: any) {
+      // Usar el parámetro si se proporciona, sino leer del signal
+      const taller = tallerParam || this.tallerService.taller();
+      
+      this.notificacionService.obtenerMisNotificaciones().subscribe();
 
-    this.incidenteService.obtenerMisIncidentes().subscribe({
-      next: (incidentes) => {
-        this.incidentesDashboard.set(incidentes);
-
-        const pendientes = incidentes.filter(
-          (i) => i.estado === 'reportado' || i.estado === 'asignado'
-        ).length;
-        const completadas = incidentes.filter(
-          (i) => i.estado === 'finalizado' || i.estado === 'cancelado'
-        ).length;
-
-        this.estadisticas.set({
-          total_solicitudes: incidentes.length,
-          solicitudes_pendientes: pendientes,
-          solicitudes_completadas: completadas,
-          tecnicos_activos: this.estadisticas().tecnicos_activos,
+      if (taller?.id) {
+        this.incidenteTallerService.obtenerEstadisticas(taller.id).subscribe({
+          next: (stats) => {
+            this.estadisticas.set({
+              total_solicitudes: stats.total,
+              solicitudes_pendientes: stats.pendientes,
+              solicitudes_completadas: stats.completadas,
+              tecnicos_activos: this.estadisticas().tecnicos_activos,
+            });
+          },
+          error: () => {}
         });
 
-        if (this.mapaListo) {
-          this.actualizarMarcadores();
-        }
-      },
-      error: () => {
-        this.loading.set(false);
-      },
-    });
+        this.incidenteService.obtenerIncidentesTaller(taller.id).subscribe({
+          next: (incidentesTaller) => {
+            this.incidentesDashboard.set(incidentesTaller);
+            this.actualizarMarcadores();
+          },
+          error: () => {}
+        });
 
-    if (taller?.id) {
-      this.incidenteService.obtenerIncidentesTaller(taller.id).subscribe({
-        next: (incidentesTaller) => {
-          this.incidentesDashboard.set(incidentesTaller);
-          this.actualizarMarcadores();
-        },
-        error: () => {}
-      });
+        this.incidenteTallerService.obtenerIncidentesAsignados(taller.id).subscribe({
+          next: (resp) => {
+            if (resp && typeof resp === 'object' && 'incidentes' in resp) {
+              const data = resp as any;
+              this.incidentesDelDia.set({
+                total_hoy: data.total_hoy || 0,
+                activos: data.activos || 0,
+                finalizados: data.finalizados || 0,
+                incidentes: data.incidentes || []
+              });
+            }
+          },
+          error: () => {}
+        });
 
-      this.incidenteTallerService.obtenerIncidentesAsignados(taller.id).subscribe({
-        next: (resp) => {
-          if (resp && typeof resp === 'object' && 'incidentes' in resp) {
-            const data = resp as any;
-            this.incidentesDelDia.set({
-              total_hoy: data.total_hoy || 0,
-              activos: data.activos || 0,
-              finalizados: data.finalizados || 0,
-              incidentes: data.incidentes || []
-            });
-          }
-        },
-        error: () => {}
+        this.tecnicoService.getTecnicos().subscribe({
+          next: (tecnicos) => {
+            this.tecnicosDashboard.set(tecnicos);
+            this.estadisticas.update((e) => ({
+              ...e,
+              tecnicos_activos: tecnicos.filter((t) => t.disponible).length,
+            }));
+            this.actualizarMarcadores();
+          },
+          error: () => {},
+        });
+      }
+
+      this.wsService.notification$.subscribe(() => {
+        this.cargarHistorialTaller();
       });
     }
-
-    this.tecnicoService.getTecnicos().subscribe({
-      next: (tecnicos) => {
-        this.tecnicosDashboard.set(tecnicos);
-        this.estadisticas.update((e) => ({
-          ...e,
-          tecnicos_activos: tecnicos.filter((t) => t.disponible).length,
-        }));
-        this.actualizarMarcadores();
-      },
-      error: () => {},
-    });
-
-    this.wsService.notification$.subscribe(() => {
-      this.cargarHistorialTaller();
-    });
-  }
 
   private cargarHistorialTaller() {
     const taller = this.tallerService.taller();

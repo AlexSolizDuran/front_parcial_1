@@ -31,11 +31,11 @@ import { Incidente, IncidenteCompleto } from '../../../models/incidente.model';
           </div>
         </header>
 
-        @if (loading()) {
+        @if (isLoading) {
           <div class="flex items-center justify-center h-48 sm:h-64">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        } @else if (!taller()) {
+        } @else if (!taller) {
           <div class="flex items-center justify-center h-48 sm:h-64">
             <p class="text-gray-500">Debes crear un taller primero</p>
           </div>
@@ -63,7 +63,7 @@ import { Incidente, IncidenteCompleto } from '../../../models/incidente.model';
                 </div>
               </div>
 
-              @if (incidentes().length === 0) {
+              @if (incidentesFiltrados().length === 0) {
                 <div class="px-3 sm:px-4 py-8 text-center text-gray-500">
                   No hay incidentes asignados a tu taller
                 </div>
@@ -147,7 +147,6 @@ export class Incidentes implements OnInit {
   sidebarService = inject(SidebarService);
   router = inject(Router);
 
-  loading = signal(true);
   filtroEstado = signal('');
 
   get collapsed() {
@@ -158,30 +157,40 @@ export class Incidentes implements OnInit {
     return this.tallerService.taller;
   }
 
-  get incidentes() {
-    return this.incidenteService.incidentes;
+  get isLoading(): boolean {
+    return this._loading();
   }
 
   incidentesFiltrados = signal<Incidente[]>([]);
+  private _loading = signal(true);
 
   ngOnInit() {
-    this.tallerService.checkMiTaller().subscribe(() => {
-      if (this.taller()) {
-        this.cargarIncidentes();
-      } else {
-        this.loading.set(false);
+    this.tallerService.checkMiTaller().subscribe({
+      next: (taller) => {
+        if (taller) {
+          this.cargarIncidentesPorTaller(taller.id);
+        } else {
+          this._loading.set(false);
+        }
+      },
+      error: () => {
+        this._loading.set(false);
       }
     });
   }
 
-  cargarIncidentes() {
-    this.incidenteService.obtenerMisIncidentes().subscribe({
+  cargarIncidentesPorTaller(tallerId: number) {
+    console.log('[DEBUG Front] Llamando API con tallerId:', tallerId);
+    this.incidenteService.obtenerIncidentesTaller(tallerId).subscribe({
       next: (incidentes) => {
+        console.log('[DEBUG Front] Incidentes recibidos:', incidentes);
+        console.log('[DEBUG Front] Total incidentes:', incidentes.length);
         this.incidentesFiltrados.set(incidentes);
-        this.loading.set(false);
+        this._loading.set(false);
       },
-      error: () => {
-        this.loading.set(false);
+      error: (err) => {
+        console.error('[DEBUG Front] Error:', err);
+        this._loading.set(false);
       }
     });
   }
@@ -191,10 +200,10 @@ export class Incidentes implements OnInit {
     this.filtroEstado.set(estado);
     
     if (estado) {
-      const todos = this.incidentes();
+      const todos = this.incidentesFiltrados();
       this.incidentesFiltrados.set(todos.filter(i => i.estado === estado));
     } else {
-      this.incidentesFiltrados.set(this.incidentes());
+      this.incidentesFiltrados.set(this.incidentesFiltrados());
     }
   }
 

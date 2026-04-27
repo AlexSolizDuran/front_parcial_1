@@ -9,22 +9,29 @@
       @if (evidenciaActual) {
         <div class="main-content">
           @if (isFoto(evidenciaActual)) {
-            @if (imagenError) {
+            @if (!evidenciaActual.url_archivo) {
+              <div class="image-error">
+                <span class="error-icon">📷</span>
+                <p>No hay imagen disponible</p>
+              </div>
+            } @else if (imagenError) {
               <div class="image-error">
                 <span class="error-icon">⚠️</span>
                 <p>Error al cargar la imagen</p>
                 <p class="error-url">{{ getFullUrl(evidenciaActual?.url_archivo) }}</p>
               </div>
             }
-            <img 
-              [src]="getFullUrl(evidenciaActual.url_archivo)" 
-              alt="Evidencia"
-              class="main-image"
-              (click)="onVerAmpliado(evidenciaActual)"
-              (load)="onImageLoad()"
-              (error)="onImageError($event)"
-              [style.display]="imagenError ? 'none' : 'block'"
-            />
+            @if (evidenciaActual.url_archivo) {
+              <img 
+                [src]="getFullUrl(evidenciaActual.url_archivo)" 
+                alt="Evidencia"
+                class="main-image"
+                (click)="onVerAmpliado(evidenciaActual)"
+                (load)="onImageLoad()"
+                (error)="onImageError($event)"
+                [style.display]="imagenError ? 'none' : 'block'"
+              />
+            }
           } @else if (isAudio(evidenciaActual)) {
             <div class="audio-player">
               <button class="play-btn" (click)="playAudio(evidenciaActual)">
@@ -53,7 +60,7 @@
           [class.active]="i === selectedIndex"
           (click)="selectEvidencia(i)"
         >
-          @if (isFoto(ev)) {
+          @if (isFoto(ev) && ev.url_archivo) {
             <img [src]="getFullUrl(ev.url_archivo)" alt="Miniatura" />
           } @else {
             <span class="thumb-icon">{{ getIconoTipo(ev.tipo) }}</span>

@@ -10,7 +10,7 @@ import { IncidenteTallerService, AsignacionPendiente } from '../../services/inci
   styleUrl: './incidente-pendiente-card.css'
 })
 export class IncidentePendienteCardComponent implements OnInit, OnDestroy {
-  @Input() asignacionPendiente!: AsignacionPendiente;
+  @Input() asignacionPendiente: AsignacionPendiente | null = null;
   @Output() aceptar = new EventEmitter<number>();
   @Output() rechazar = new EventEmitter<number>();
   @Output() verDetalles = new EventEmitter<void>();
@@ -19,10 +19,12 @@ export class IncidentePendienteCardComponent implements OnInit, OnDestroy {
   tiempoRestante = signal(0);
   private intervalId: any;
 
-  ngOnInit() {
-    this.tiempoRestante.set(this.asignacionPendiente.tiempo_restante_segundos);
-    this.startTimer();
-  }
+ngOnInit() {
+     if (this.asignacionPendiente) {
+       this.tiempoRestante.set(this.asignacionPendiente.tiempo_restante_segundos);
+       this.startTimer();
+     }
+   }
 
   ngOnDestroy() {
     this.stopTimer();
@@ -74,13 +76,17 @@ export class IncidentePendienteCardComponent implements OnInit, OnDestroy {
     return labels[prioridad] || prioridad;
   }
 
-  onAceptar() {
-    this.aceptar.emit(this.asignacionPendiente.asignacion.id);
-  }
+onAceptar() {
+     if (this.asignacionPendiente) {
+       this.aceptar.emit(this.asignacionPendiente.asignacion.id);
+     }
+   }
 
-  onRechazar() {
-    this.rechazar.emit(this.asignacionPendiente.asignacion.id);
-  }
+onRechazar() {
+     if (this.asignacionPendiente) {
+       this.rechazar.emit(this.asignacionPendiente.asignacion.id);
+     }
+   }
 
   onVerDetalles() {
     this.verDetalles.emit();
