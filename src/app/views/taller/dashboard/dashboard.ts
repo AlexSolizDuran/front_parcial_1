@@ -18,6 +18,7 @@ import { DetalleIncidenteModalComponent } from '../../../components/detalle-inci
 import { IncidentePendienteCardComponent } from '../../../components/incidente-pendiente-card/incidente-pendiente-card';
 import { DetalleIncidenteFullComponent } from '../../../components/detalle-incidente-full/detalle-incidente-full';
 import { ModalSeleccionarTecnicoComponent } from '../../../components/modal-seleccionar-tecnico/modal-seleccionar-tecnico';
+import { ReportePagosComponent } from './reporte-pagos/reporte-pagos.component';
 import { Incidente } from '../../../models/incidente.model';
 import { Tecnico } from '../../../models/tecnico.model';
 import { HistorialTaller } from '../../../models/historial-taller.model';
@@ -43,6 +44,7 @@ interface Estadisticas {
     IncidentePendienteCardComponent,
     DetalleIncidenteFullComponent,
     ModalSeleccionarTecnicoComponent,
+    ReportePagosComponent,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',

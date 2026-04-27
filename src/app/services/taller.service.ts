@@ -1,5 +1,5 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
 import { Taller, TallerCreate, TallerUpdate, Especialidad } from '../models/taller.model';
 import { HistorialTaller } from '../models/historial-taller.model';
@@ -117,5 +117,16 @@ export class TallerService {
 
   obtenerHistorialTaller(tallerId: number): Observable<HistorialTaller[]> {
     return this.http.get<HistorialTaller[]>(`${this.apiUrl}/${tallerId}/historial`);
+  }
+
+  generarReportePagos(tallerId: number, fechaDesde?: string, fechaHasta?: string): Observable<Blob> {
+    let params = new HttpParams();
+    if (fechaDesde) params = params.set('fecha_desde', fechaDesde);
+    if (fechaHasta) params = params.set('fecha_hasta', fechaHasta);
+
+    return this.http.get(
+      `${environment.apiUrl}/pagos/taller/${tallerId}/pagos/pdf`,
+      { params, responseType: 'blob' }
+    );
   }
 }
